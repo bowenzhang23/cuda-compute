@@ -1,6 +1,6 @@
 # Cuda Compute
 
-Matrix and Vector computing library with CUDA.
+Matrix and Vector computing library with minimal CUDA.
 
 ## Troubleshooting
 

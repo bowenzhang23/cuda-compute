@@ -11,6 +11,7 @@ project(
   VERSION 0.1
   LANGUAGES CXX CUDA)
 
+add_subdirectory(ext/nanobind)
 add_subdirectory(Core)
 add_subdirectory(UnitTest)
 

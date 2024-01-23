@@ -9,13 +9,19 @@ class Vector : public CudaData<T>
 {
 public:
     Vector(size_t len, cudaStream_t stream = 0);
-    Vector(T* hmem, size_t len, cudaStream_t stream = 0);
+    Vector(const T* hmem, size_t len, cudaStream_t stream = 0);
+    Vector(const std::vector<T>& hmem, size_t len, cudaStream_t stream = 0);
     Vector(Vector& other);
     Vector(Vector&& other);
     Vector& operator=(Vector& other);
     Vector& operator=(Vector&& other);
 
     inline size_t Nlen() const { return this->m_len; }
+
+    virtual std::vector<T> ToCPU() const override
+    {
+        return CudaData<T>::ToCPU();
+    }
 
     virtual inline std::vector<size_t> Shape() const override
     {
@@ -33,9 +39,22 @@ inline Vector<T>::Vector(size_t len, cudaStream_t stream)
 }
 
 template <typename T>
-inline Vector<T>::Vector(T* hmem, size_t len, cudaStream_t stream)
+inline Vector<T>::Vector(const T* hmem, size_t len, cudaStream_t stream)
     : m_len(len), CudaData<T>(hmem, sizeof(T) * len, stream)
 {
+}
+
+template <typename T>
+inline Vector<T>::Vector(const std::vector<T>& hmem, size_t len,
+                         cudaStream_t stream)
+    : m_len(len), CudaData<T>(hmem.data(), sizeof(T) * len, stream)
+{
+    if (len != hmem.size()) {
+        fprintf(stdout,
+                "Size of vector [%lu] != len [%lu]"
+                ". Unexpected behaviour may occur!\n",
+                hmem.size(), len);
+    }
 }
 
 template <typename T>

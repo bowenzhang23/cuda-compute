@@ -9,7 +9,9 @@ class Matrix : public CudaData<T>
 {
 public:
     Matrix(size_t nrow, size_t ncol, cudaStream_t stream = 0);
-    Matrix(T* hmem, size_t nrow, size_t ncol, cudaStream_t stream = 0);
+    Matrix(const T* hmem, size_t nrow, size_t ncol, cudaStream_t stream = 0);
+    Matrix(const std::vector<T>& hmem, size_t nrow, size_t ncol,
+           cudaStream_t stream = 0);
     Matrix(Matrix& other);
     Matrix(Matrix&& other);
     Matrix& operator=(Matrix& other);
@@ -17,6 +19,11 @@ public:
 
     inline size_t Nrow() const { return m_nrow; }
     inline size_t Ncol() const { return m_ncol; }
+
+    virtual std::vector<T> ToCPU() const override
+    {
+        return CudaData<T>::ToCPU();
+    }
 
     virtual inline std::vector<size_t> Shape() const override
     {
@@ -38,11 +45,27 @@ inline Matrix<T>::Matrix(size_t nrow, size_t ncol, cudaStream_t stream)
 }
 
 template <typename T>
-inline Matrix<T>::Matrix(T* hmem, size_t nrow, size_t ncol, cudaStream_t stream)
+inline Matrix<T>::Matrix(const T* hmem, size_t nrow, size_t ncol,
+                         cudaStream_t stream)
     : m_nrow(nrow)
     , m_ncol(ncol)
     , CudaData<T>(hmem, sizeof(T) * nrow * ncol, stream)
 {
+}
+
+template <typename T>
+inline Matrix<T>::Matrix(const std::vector<T>& hmem, size_t nrow, size_t ncol,
+                         cudaStream_t stream)
+    : m_nrow(nrow)
+    , m_ncol(ncol)
+    , CudaData<T>(hmem.data(), sizeof(T) * nrow * ncol, stream)
+{
+    if (nrow * ncol != hmem.size()) {
+        fprintf(stdout,
+                "Size of vector [%lu] != row x col [%lu]"
+                ". Unexpected behaviour may occur!\n",
+                hmem.size(), nrow * ncol);
+    }
 }
 
 template <typename T>

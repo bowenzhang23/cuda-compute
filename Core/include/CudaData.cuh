@@ -4,14 +4,12 @@
 #include "cuda_runtime.h"
 #include <vector>
 
-#define DEBUG_CONSTRUCTOR
-
 template <typename T>
 class CudaData
 {
 public:
     CudaData(size_t size, cudaStream_t stream = 0);
-    CudaData(T* hmem, size_t size, cudaStream_t stream = 0);
+    CudaData(const T* hmem, size_t size, cudaStream_t stream = 0);
     CudaData(CudaData& other);
     CudaData(CudaData&& other);
     CudaData& operator=(CudaData& other);
@@ -44,7 +42,7 @@ inline CudaData<T>::CudaData(size_t size, cudaStream_t stream)
 }
 
 template <typename T>
-inline CudaData<T>::CudaData(T* hmem, size_t size, cudaStream_t stream)
+inline CudaData<T>::CudaData(const T* hmem, size_t size, cudaStream_t stream)
     : m_size(size), m_stream(stream)
 {
     m_hmem = (T*) calloc(1, m_size);
