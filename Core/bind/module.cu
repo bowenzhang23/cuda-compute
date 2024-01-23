@@ -3,6 +3,7 @@
 #include "nanobind/nanobind.h"
 #include "nanobind/stl/array.h"
 #include "nanobind/stl/vector.h"
+#include "nanobind/stl/string.h"
 
 namespace nb = nanobind;
 using namespace nb::literals;
@@ -66,6 +67,7 @@ NB_MODULE(cuda_compute, m)
         .def("__sub__",
              [](const Matrixi& a, const Matrixi& b) { return a - b; });
 
+    m.def("device_query", []() { return DeviceManager::Instance().ToString(); });
     m.def("sgemm", &MatMul<float>, "a"_a, "b"_a);
     m.def("igemm", &MatMul<int>, "a"_a, "b"_a);
 }
