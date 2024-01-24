@@ -1,11 +1,11 @@
-from cuda_compute import *
+from cuda_compute_wrapper import *
 from time import perf_counter_ns
 import numpy as np
 
 print(device_query())
 
-a = VectorfBase([1, 2, 3, 4, 5], 5)
-b = VectorfBase([1, 2, 3, 4, 5], 5)
+a = Vectorf([1, 2, 3, 4, 5], 5)
+b = Vectorf([1, 2, 3, 4, 5], 5)
 
 print(f"{(a + b).cpu()=}")
 print(f"{(a - b).cpu()=}")
@@ -20,8 +20,8 @@ print(f"{(a * 2).cpu()=}")
 print(f"{(2 / b).cpu()=}")
 print(f"{(a / 2).cpu()=}")
 
-a = MatrixfBase([1, 2, 3, 4], 2, 2)
-b = MatrixfBase([1, 2, 3, 4], 2, 2)
+a = Matrixf([1, 2, 3, 4], 2, 2)
+b = Matrixf([1, 2, 3, 4], 2, 2)
 
 print(f"{(-a).cpu()=}")
 print(f"{(+a).cpu()=}")
@@ -51,8 +51,8 @@ a = va.tolist()
 b = vb.tolist()
 
 print("transfer")
-a = MatrixfBase(a, m, k)
-b = MatrixfBase(b, k, n)
+a = Matrixf(a, m, k)
+b = Matrixf(b, k, n)
 print("finished")
 
 start = perf_counter_ns()
