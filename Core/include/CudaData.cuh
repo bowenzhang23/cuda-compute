@@ -6,7 +6,7 @@
 #include <vector>
 
 // #define DEBUG_CONSTRUCTOR
-#define DEBUG_PERFORMANCE
+// #define DEBUG_PERFORMANCE
 
 template <typename T>
 class CudaData
@@ -39,22 +39,36 @@ template <typename T>
 inline CudaData<T>::CudaData(size_t size, cudaStream_t stream)
     : m_size(size), m_stream(stream)
 {
+#ifdef DEBUG_PERFORMANCE
+    Timer::Instance().Tick(m_stream);
+#endif
     m_hmem = (T*) calloc(1, m_size);
     CUDA_CHECK(cudaMallocAsync((void**) &m_dmem, m_size, m_stream));
     CUDA_CHECK(cudaMemsetAsync((void*) m_dmem, 0, m_size, m_stream));
     CUDA_CHECK(cudaStreamSynchronize(m_stream));
+#ifdef DEBUG_PERFORMANCE
+    Timer::Instance().Tick(m_stream);
+    Timer::Instance().ShowElapsedTime("Construct zeros");
+#endif
 }
 
 template <typename T>
 inline CudaData<T>::CudaData(const T* hmem, size_t size, cudaStream_t stream)
     : m_size(size), m_stream(stream)
 {
+#ifdef DEBUG_PERFORMANCE
+    Timer::Instance().Tick(m_stream);
+#endif
     m_hmem = (T*) calloc(1, m_size);
     CUDA_CHECK(cudaMallocAsync((void**) &m_dmem, m_size, m_stream));
     memcpy(m_hmem, hmem, m_size);
     CUDA_CHECK(cudaMemcpyAsync(m_dmem, m_hmem, m_size, cudaMemcpyHostToDevice,
                                m_stream));
     CUDA_CHECK(cudaStreamSynchronize(m_stream));
+#ifdef DEBUG_PERFORMANCE
+    Timer::Instance().Tick(m_stream);
+    Timer::Instance().ShowElapsedTime("Construct from data");
+#endif
 }
 
 template <typename T>
@@ -67,11 +81,18 @@ inline CudaData<T>::CudaData(const CudaData& other)
     m_size   = other.m_size;
     m_stream = other.m_stream;
     m_hmem   = (T*) calloc(1, m_size);
+#ifdef DEBUG_PERFORMANCE
+    Timer::Instance().Tick(m_stream);
+#endif
     CUDA_CHECK(cudaMallocAsync((void**) &m_dmem, m_size, m_stream));
     memcpy(m_hmem, other.m_hmem, m_size);
     CUDA_CHECK(cudaMemcpyAsync(m_dmem, other.m_dmem, m_size,
                                cudaMemcpyDeviceToDevice, m_stream));
     CUDA_CHECK(cudaStreamSynchronize(m_stream));
+#ifdef DEBUG_PERFORMANCE
+    Timer::Instance().Tick(m_stream);
+    Timer::Instance().ShowElapsedTime("Copy construct");
+#endif
 }
 
 template <typename T>
@@ -83,9 +104,16 @@ inline CudaData<T>::CudaData(CudaData&& other)
     if (this == &other) return;
     m_size   = other.m_size;
     m_stream = other.m_stream;
+#ifdef DEBUG_PERFORMANCE
+    Timer::Instance().Tick(m_stream);
+#endif
     std::swap(m_hmem, other.m_hmem);
     std::swap(m_dmem, other.m_dmem);
     CUDA_CHECK(cudaStreamSynchronize(m_stream));
+#ifdef DEBUG_PERFORMANCE
+    Timer::Instance().Tick(m_stream);
+    Timer::Instance().ShowElapsedTime("Move construct");
+#endif
 }
 
 template <typename T>
@@ -97,12 +125,19 @@ inline CudaData<T>& CudaData<T>::operator=(const CudaData& other)
     if (this == &other) return *this;
     m_size   = other.m_size;
     m_stream = other.m_stream;
+#ifdef DEBUG_PERFORMANCE
+    Timer::Instance().Tick(m_stream);
+#endif
     m_hmem   = (T*) calloc(1, m_size);
     CUDA_CHECK(cudaMallocAsync((void**) &m_dmem, m_size, m_stream));
     memcpy(m_hmem, other.m_hmem, m_size);
     CUDA_CHECK(cudaMemcpyAsync(m_dmem, other.m_dmem, m_size,
                                cudaMemcpyDeviceToDevice, m_stream));
     CUDA_CHECK(cudaStreamSynchronize(m_stream));
+#ifdef DEBUG_PERFORMANCE
+    Timer::Instance().Tick(m_stream);
+    Timer::Instance().ShowElapsedTime("Copy assignment");
+#endif
     return *this;
 }
 
@@ -115,9 +150,16 @@ inline CudaData<T>& CudaData<T>::operator=(CudaData&& other)
     if (this == &other) return *this;
     m_size   = other.m_size;
     m_stream = other.m_stream;
+#ifdef DEBUG_PERFORMANCE
+    Timer::Instance().Tick(m_stream);
+#endif
     std::swap(m_hmem, other.m_hmem);
     std::swap(m_dmem, other.m_dmem);
     CUDA_CHECK(cudaStreamSynchronize(m_stream));
+#ifdef DEBUG_PERFORMANCE
+    Timer::Instance().Tick(m_stream);
+    Timer::Instance().ShowElapsedTime("Move assignment");
+#endif
     return *this;
 }
 
@@ -132,6 +174,9 @@ inline CudaData<T>::~CudaData()
 template <typename T>
 inline std::vector<T> CudaData<T>::ToCPU() const
 {
+#ifdef DEBUG_PERFORMANCE
+    Timer::Instance().Tick(m_stream);
+#endif
     auto           count = m_size / sizeof(T);
     std::vector<T> hmem(count);
     CUDA_CHECK(cudaMemcpyAsync(m_hmem, m_dmem, m_size, cudaMemcpyDeviceToHost,
@@ -139,4 +184,8 @@ inline std::vector<T> CudaData<T>::ToCPU() const
     CUDA_CHECK(cudaStreamSynchronize(m_stream));
     memcpy((void*) hmem.data(), m_hmem, m_size);
     return hmem;
+#ifdef DEBUG_PERFORMANCE
+    Timer::Instance().Tick(m_stream);
+    Timer::Instance().ShowElapsedTime("To CPU");
+#endif
 }
