@@ -1,5 +1,4 @@
 #include "Matrix.cuh"
-#include "Timer.cuh"
 #include "gtest/gtest.h"
 
 #include <algorithm>
@@ -140,10 +139,7 @@ TEST(Matrix, MatMulSmall)
     std::generate(b.begin(), b.end(), [i = -5]() mutable { return (i++) % 9; });
     Matrix<int> ma(a.data(), m, k);
     Matrix<int> mb(b.data(), k, n);
-    Timer::Instance().Tick();
     Matrix<int> mc = MatMulSmall(ma, mb);
-    Timer::Instance().Tick();
-    Timer::Instance().ShowElapsedTime("MatMulSmall");
     EXPECT_EQ(mc.Nrow(), ma.Nrow());
     EXPECT_EQ(mc.Ncol(), mb.Ncol());
     // TODO cpu matmul
@@ -172,10 +168,7 @@ TEST(Matrix, MatMulLarge)
     std::generate(b.begin(), b.end(), [i = -5]() mutable { return (i++) % 9; });
     Matrix<int> ma(a.data(), m, k);
     Matrix<int> mb(b.data(), k, n);
-    Timer::Instance().Tick();
     Matrix<int> mc = MatMulLarge(ma, mb);
-    Timer::Instance().Tick();
-    Timer::Instance().ShowElapsedTime("MatMulLarge");
     EXPECT_EQ(mc.Nrow(), ma.Nrow());
     EXPECT_EQ(mc.Ncol(), mb.Ncol());
     // TODO cpu matmul
@@ -204,10 +197,7 @@ TEST(Matrix, MatMul1)
     std::generate(b.begin(), b.end(), [i = -5]() mutable { return (i++) % 9; });
     Matrix<int> ma(a.data(), m, k);
     Matrix<int> mb(b.data(), k, n);
-    Timer::Instance().Tick();
     Matrix<int> mc = MatMul(ma, mb);
-    Timer::Instance().Tick();
-    Timer::Instance().ShowElapsedTime("MatMul");
     EXPECT_EQ(mc.Nrow(), ma.Nrow());
     EXPECT_EQ(mc.Ncol(), mb.Ncol());
     // TODO cpu matmul
@@ -236,10 +226,7 @@ TEST(Matrix, MatMul2)
     std::generate(b.begin(), b.end(), [i = -5]() mutable { return (i++) % 9; });
     Matrix<int> ma(a.data(), m, k);
     Matrix<int> mb(b.data(), k, n);
-    Timer::Instance().Tick();
     Matrix<int> mc = MatMul(ma, mb);
-    Timer::Instance().Tick();
-    Timer::Instance().ShowElapsedTime("MatMul");
     EXPECT_EQ(mc.Nrow(), ma.Nrow());
     EXPECT_EQ(mc.Ncol(), mb.Ncol());
     // TODO cpu matmul

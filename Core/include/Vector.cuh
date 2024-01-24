@@ -11,9 +11,9 @@ public:
     Vector(size_t len, cudaStream_t stream = 0);
     Vector(const T* hmem, size_t len, cudaStream_t stream = 0);
     Vector(const std::vector<T>& hmem, size_t len, cudaStream_t stream = 0);
-    Vector(Vector& other);
+    Vector(const Vector& other);
     Vector(Vector&& other);
-    Vector& operator=(Vector& other);
+    Vector& operator=(const Vector& other);
     Vector& operator=(Vector&& other);
 
     inline size_t Nlen() const { return this->m_len; }
@@ -58,26 +58,25 @@ inline Vector<T>::Vector(const std::vector<T>& hmem, size_t len,
 }
 
 template <typename T>
-inline Vector<T>::Vector(Vector& other) : CudaData<T>(other)
+inline Vector<T>::Vector(const Vector& other)
+    : CudaData<T>(other), m_len(other.m_len)
 {
 #ifdef DEBUG_CONSTRUCTOR
     fprintf(stdout, "Vector copy ctor\n");
 #endif
-    this->m_len = other.m_len;
 }
 
 template <typename T>
-inline Vector<T>::Vector(Vector&& other) : CudaData<T>(other)
-
+inline Vector<T>::Vector(Vector&& other)
+    : CudaData<T>(std::move(other)), m_len(other.m_len)
 {
 #ifdef DEBUG_CONSTRUCTOR
     fprintf(stdout, "Vector move ctor\n");
 #endif
-    this->m_len = other.m_len;
 }
 
 template <typename T>
-inline Vector<T>& Vector<T>::operator=(Vector& other)
+inline Vector<T>& Vector<T>::operator=(const Vector& other)
 {
 #ifdef DEBUG_CONSTRUCTOR
     fprintf(stdout, "Vector copy assignment\n");
@@ -120,8 +119,16 @@ inline Vector<T> Linear(T a, const Vector<T>& x, T b, const Vector<T>& y, T c)
     unsigned nb = DeviceManager::Curr().Prop().multiProcessorCount * 4; // 120
     unsigned nt = 256;
 
+#ifdef DEBUG_PERFORMANCE
+    Timer::Instance().Tick(s);
+#endif
     VectorOp::axpbyc<<<nb, nt, 0, s>>>(z.Data(), a, x.Data(), b, y.Data(), c,
                                        len);
+#ifdef DEBUG_PERFORMANCE
+    Timer::Instance().Tick(s);
+    Timer::Instance().ShowElapsedTime("Vector Linear");
+#endif
+
     CUDA_CHECK_LAST();
     CUDA_CHECK(cudaStreamSynchronize(s));
 
@@ -150,8 +157,16 @@ inline Vector<T> Power(T c, const Vector<T>& x, T a, const Vector<T>& y, T b)
     unsigned nb = DeviceManager::Curr().Prop().multiProcessorCount * 4; // 120
     unsigned nt = 256;
 
+#ifdef DEBUG_PERFORMANCE
+    Timer::Instance().Tick(s);
+#endif
     VectorOp::cxamyb<<<nb, nt, 0, s>>>(z.Data(), c, x.Data(), a, y.Data(), b,
                                        len);
+#ifdef DEBUG_PERFORMANCE
+    Timer::Instance().Tick(s);
+    Timer::Instance().ShowElapsedTime("Vector Power");
+#endif
+
     CUDA_CHECK_LAST();
     CUDA_CHECK(cudaStreamSynchronize(s));
 

@@ -17,7 +17,7 @@ using Matrixi = Matrix<int>;
 template <typename T, typename ContainerType, typename ElementType>
 [[maybe_unused]] T& add_arithmetic(T& nb_class)
 {
-    return nb_class.def("__pos__", [](const ContainerType& a) { return +a; })
+    return nb_class.def("__pos__", [](const ContainerType& a) { return a; })
         .def("__neg__", [](const ContainerType& a) { return -a; })
         .def("__pow__",
              [](const ContainerType& a, const ElementType b) {

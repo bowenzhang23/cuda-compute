@@ -1,8 +1,12 @@
 #pragma once
 
 #include "Error.cuh"
+#include "Timer.cuh"
 #include "cuda_runtime.h"
 #include <vector>
+
+// #define DEBUG_CONSTRUCTOR
+#define DEBUG_PERFORMANCE
 
 template <typename T>
 class CudaData
@@ -10,9 +14,9 @@ class CudaData
 public:
     CudaData(size_t size, cudaStream_t stream = 0);
     CudaData(const T* hmem, size_t size, cudaStream_t stream = 0);
-    CudaData(CudaData& other);
+    CudaData(const CudaData& other);
     CudaData(CudaData&& other);
-    CudaData& operator=(CudaData& other);
+    CudaData& operator=(const CudaData& other);
     CudaData& operator=(CudaData&& other);
 
     virtual ~CudaData();
@@ -27,8 +31,8 @@ public:
 protected:
     cudaStream_t m_stream;
     size_t       m_size;
-    T*           m_dmem;
-    T*           m_hmem;
+    T*           m_dmem = nullptr;
+    T*           m_hmem = nullptr;
 };
 
 template <typename T>
@@ -54,7 +58,7 @@ inline CudaData<T>::CudaData(const T* hmem, size_t size, cudaStream_t stream)
 }
 
 template <typename T>
-inline CudaData<T>::CudaData(CudaData& other)
+inline CudaData<T>::CudaData(const CudaData& other)
 {
 #ifdef DEBUG_CONSTRUCTOR
     fprintf(stdout, "CudaData copy ctor\n");
@@ -85,7 +89,7 @@ inline CudaData<T>::CudaData(CudaData&& other)
 }
 
 template <typename T>
-inline CudaData<T>& CudaData<T>::operator=(CudaData& other)
+inline CudaData<T>& CudaData<T>::operator=(const CudaData& other)
 {
 #ifdef DEBUG_CONSTRUCTOR
     fprintf(stdout, "CudaData copy assignment\n");

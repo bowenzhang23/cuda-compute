@@ -21,6 +21,38 @@ TEST(Vector, Construct)
     EXPECT_EQ(px, x);
 }
 
+TEST(Vector, ConstructSTLVector)
+{
+    constexpr std::size_t len = 4001;
+    std::vector<float>    x(len);
+    std::generate(x.begin(), x.end(), [i = 0]() mutable { return i++; });
+    Vector<float> vf(x, len);
+    auto          pf = vf.ToCPU();
+    EXPECT_EQ(pf, x);
+}
+
+TEST(Vector, CopyConstruct)
+{
+    constexpr std::size_t len = 4001;
+    std::vector<float>    x(len);
+    std::generate(x.begin(), x.end(), [i = 0]() mutable { return i++; });
+    Vector<float> vf(x, len);
+    Vector<float> vf_copy(vf);
+    EXPECT_EQ(vf_copy.ToCPU(), vf.ToCPU());
+    EXPECT_EQ(vf_copy.Shape().at(0), vf.Shape().at(0));
+}
+
+TEST(Vector, MoveConstruct)
+{
+    constexpr std::size_t len = 4001;
+    std::vector<float>    x(len);
+    std::generate(x.begin(), x.end(), [i = 0]() mutable { return i++; });
+    Vector<float> vf(x, len);
+    Vector<float> vf_copy(std::move(vf));
+    EXPECT_EQ(vf_copy.ToCPU(), x);
+    EXPECT_EQ(vf_copy.Shape().at(0), len);
+}
+
 TEST(Vector, Linear)
 {
     constexpr std::size_t len = 4001;

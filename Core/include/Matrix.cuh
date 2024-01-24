@@ -12,9 +12,9 @@ public:
     Matrix(const T* hmem, size_t nrow, size_t ncol, cudaStream_t stream = 0);
     Matrix(const std::vector<T>& hmem, size_t nrow, size_t ncol,
            cudaStream_t stream = 0);
-    Matrix(Matrix& other);
+    Matrix(const Matrix& other);
     Matrix(Matrix&& other);
-    Matrix& operator=(Matrix& other);
+    Matrix& operator=(const Matrix& other);
     Matrix& operator=(Matrix&& other);
 
     inline size_t Nrow() const { return m_nrow; }
@@ -69,27 +69,25 @@ inline Matrix<T>::Matrix(const std::vector<T>& hmem, size_t nrow, size_t ncol,
 }
 
 template <typename T>
-inline Matrix<T>::Matrix(Matrix& other) : CudaData<T>(other)
+inline Matrix<T>::Matrix(const Matrix& other)
+    : CudaData<T>(other), m_nrow(other.m_nrow), m_ncol(other.m_ncol)
 {
 #ifdef DEBUG_CONSTRUCTOR
     fprintf(stdout, "Matrix copy ctor\n");
 #endif
-    this->m_nrow = other.m_nrow;
-    this->m_ncol = other.m_ncol;
 }
 
 template <typename T>
-inline Matrix<T>::Matrix(Matrix&& other) : CudaData<T>(other)
+inline Matrix<T>::Matrix(Matrix&& other)
+    : CudaData<T>(std::move(other)), m_nrow(other.m_nrow), m_ncol(other.m_ncol)
 {
 #ifdef DEBUG_CONSTRUCTOR
     fprintf(stdout, "Matrix move ctor\n");
 #endif
-    this->m_nrow = other.m_nrow;
-    this->m_ncol = other.m_ncol;
 }
 
 template <typename T>
-inline Matrix<T>& Matrix<T>::operator=(Matrix& other)
+inline Matrix<T>& Matrix<T>::operator=(const Matrix& other)
 {
 #ifdef DEBUG_CONSTRUCTOR
     fprintf(stdout, "Matrix copy assignment\n");
@@ -124,8 +122,16 @@ inline Matrix<T> Matrix<T>::Transpose() const
                 ((unsigned) Ncol() + tile_dim - 1) / tile_dim };
     dim3 nt = { tile_dim, block_rows };
 
+#ifdef DEBUG_PERFORMANCE
+    Timer::Instance().Tick(this->S());
+#endif
     MatrixOp::transpose<<<nb, nt, 0, this->S()>>>(xt.Data(), this->Data(),
                                                   Nrow(), Ncol());
+#ifdef DEBUG_PERFORMANCE
+    Timer::Instance().Tick(this->S());
+    Timer::Instance().ShowElapsedTime("Matrix Transpose");
+#endif
+
     CUDA_CHECK_LAST();
     CUDA_CHECK(cudaStreamSynchronize(this->m_stream));
     return xt;
@@ -157,8 +163,16 @@ inline Matrix<T> Linear(T a, const Matrix<T>& x, T b, const Matrix<T>& y, T c)
     dim3 nb       = { (unsigned) sm_count, 4 }; // 120
     dim3 nt       = { 32, 8 };
 
+#ifdef DEBUG_PERFORMANCE
+    Timer::Instance().Tick(s);
+#endif
     MatrixOp::axpbyc<<<nb, nt, 0, s>>>(z.Data(), a, x.Data(), b, y.Data(), c,
                                        n_row, n_col);
+#ifdef DEBUG_PERFORMANCE
+    Timer::Instance().Tick(s);
+    Timer::Instance().ShowElapsedTime("Matrix Linear");
+#endif
+
     CUDA_CHECK_LAST();
     CUDA_CHECK(cudaStreamSynchronize(s));
 
@@ -191,8 +205,16 @@ inline Matrix<T> Power(T c, const Matrix<T>& x, T a, const Matrix<T>& y, T b)
     dim3 nb       = { (unsigned) sm_count, 4 }; // 120
     dim3 nt       = { 32, 8 };
 
+#ifdef DEBUG_PERFORMANCE
+    Timer::Instance().Tick(s);
+#endif
     MatrixOp::cxamyb<<<nb, nt, 0, s>>>(z.Data(), c, x.Data(), a, y.Data(), b,
                                        n_row, n_col);
+#ifdef DEBUG_PERFORMANCE
+    Timer::Instance().Tick(s);
+    Timer::Instance().ShowElapsedTime("Matrix Power");
+#endif
+
     CUDA_CHECK_LAST();
     CUDA_CHECK(cudaStreamSynchronize(s));
 
@@ -311,8 +333,15 @@ inline Matrix<T> MatMulSmall(const Matrix<T>& x, const Matrix<T>& y)
     dim3 nb = { (n + t - 1) / t, (m + t - 1) / t }; /* col, row */
     dim3 nt = { t * t };
 
+#ifdef DEBUG_PERFORMANCE
+    Timer::Instance().Tick(s);
+#endif
     MatrixOp::gemm_small<T, t>
         <<<nb, nt, 0, s>>>(z.Data(), x.Data(), y.Data(), m, k, n);
+#ifdef DEBUG_PERFORMANCE
+    Timer::Instance().Tick(s);
+    Timer::Instance().ShowElapsedTime("Matrix MatMulSmall");
+#endif
 
     CUDA_CHECK_LAST();
     CUDA_CHECK(cudaStreamSynchronize(s));
@@ -351,8 +380,15 @@ inline Matrix<T> MatMulLarge(const Matrix<T>& x, const Matrix<T>& y)
     dim3 nb = { (n + tile_n - 1) / tile_n, (m + tile_m - 1) / tile_m };
     dim3 nt = { tile_m * tile_n / block_m / block_n };
 
+#ifdef DEBUG_PERFORMANCE
+    Timer::Instance().Tick(s);
+#endif
     MatrixOp::gemm_large<T, tile_m, tile_k, tile_n, block_m, block_n>
         <<<nb, nt, 0, s>>>(z.Data(), x.Data(), y.Data(), m, k, n);
+#ifdef DEBUG_PERFORMANCE
+    Timer::Instance().Tick(s);
+    Timer::Instance().ShowElapsedTime("Matrix MatMulLarge");
+#endif
 
     CUDA_CHECK_LAST();
     CUDA_CHECK(cudaStreamSynchronize(s));
