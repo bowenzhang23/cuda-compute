@@ -1,5 +1,5 @@
-#include "Vector.cuh"
 #include "Stream.cuh"
+#include "Vector.cuh"
 #include "gtest/gtest.h"
 
 #include <algorithm>
@@ -30,10 +30,10 @@ TEST(Vector, Linear)
     std::generate(y.begin(), y.end(), [i = 0]() mutable { return -(i++); });
     Vector<int> vx(x.data(), len);
     Vector<int> vy(y.data(), len);
-    Vector<int> vz = Linear(3, vx, 2, vy);
+    Vector<int> vz = Linear(3, vx, 2, vy, 1);
     auto        pz = vz.ToCPU();
     EXPECT_TRUE(std::all_of(pz.begin(), pz.end(),
-                            [i = 0](int j) mutable { return j == +(i++); }));
+                            [i = 0](int j) mutable { return j == 1 + (i++); }));
 }
 
 TEST(Vector, LinearStream)
@@ -46,11 +46,26 @@ TEST(Vector, LinearStream)
     std::generate(y.begin(), y.end(), [i = 0]() mutable { return -(i++); });
     Vector<int> vx(x.data(), len, stream->Cuda());
     Vector<int> vy(y.data(), len, stream->Cuda());
-    Vector<int> vz = Linear(3, vx, 2, vy);
+    Vector<int> vz = Linear(3, vx, 2, vy, 1);
     auto        pz = vz.ToCPU();
     EXPECT_EQ(vx.S(), vz.S());
     EXPECT_TRUE(std::all_of(pz.begin(), pz.end(),
-                            [i = 0](int j) mutable { return j == +(i++); }));
+                            [i = 0](int j) mutable { return j == 1 + (i++); }));
+}
+
+TEST(Vector, Power)
+{
+    constexpr std::size_t len = 4001;
+    std::vector<int>      x(len);
+    std::vector<int>      y(len);
+    std::generate(x.begin(), x.end(), []() { return -2; });
+    std::generate(y.begin(), y.end(), []() { return -1; });
+    Vector<int> vx(x.data(), len);
+    Vector<int> vy(y.data(), len);
+    Vector<int> vz = Power(3, vx, 2, vy, 1);
+    auto        pz = vz.ToCPU();
+    EXPECT_TRUE(
+        std::all_of(pz.begin(), pz.end(), [](int j) { return j == -12; }));
 }
 
 TEST(Vector, Scale)

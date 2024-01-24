@@ -99,7 +99,7 @@ inline Vector<T>& Vector<T>::operator=(Vector&& other)
 }
 
 template <typename T>
-inline Vector<T> Linear(T a, const Vector<T>& x, T b, const Vector<T>& y)
+inline Vector<T> Linear(T a, const Vector<T>& x, T b, const Vector<T>& y, T c)
 {
     cudaStream_t s   = x.S();
     auto         len = std::min(x.Nlen(), y.Nlen());
@@ -109,12 +109,19 @@ inline Vector<T> Linear(T a, const Vector<T>& x, T b, const Vector<T>& y)
         s = 0;
     }
     Vector<T> z(len, s);
-    if (x.Shape() != y.Shape()) return z;
+    if (x.Shape() != y.Shape()) {
+        fprintf(stdout,
+                "Shape of x [%lu] is not compatible with that of y [%lu]"
+                ", will return empty matrix\n",
+                x.Shape()[0], y.Shape()[0]);
+        return z;
+    }
 
     unsigned nb = DeviceManager::Curr().Prop().multiProcessorCount * 4; // 120
     unsigned nt = 256;
 
-    VectorOp::axpby<<<nb, nt, 0, s>>>(z.Data(), a, x.Data(), b, y.Data(), len);
+    VectorOp::axpbyc<<<nb, nt, 0, s>>>(z.Data(), a, x.Data(), b, y.Data(), c,
+                                       len);
     CUDA_CHECK_LAST();
     CUDA_CHECK(cudaStreamSynchronize(s));
 
@@ -122,25 +129,115 @@ inline Vector<T> Linear(T a, const Vector<T>& x, T b, const Vector<T>& y)
 }
 
 template <typename T>
+inline Vector<T> Power(T c, const Vector<T>& x, T a, const Vector<T>& y, T b)
+{
+    cudaStream_t s   = x.S();
+    auto         len = std::min(x.Nlen(), y.Nlen());
+
+    if (x.S() != y.S()) {
+        CUDA_CHECK(cudaDeviceSynchronize());
+        s = 0;
+    }
+    Vector<T> z(len, s);
+    if (x.Shape() != y.Shape()) {
+        fprintf(stdout,
+                "Shape of x [%lu] is not compatible with that of y [%lu]"
+                ", will return empty matrix\n",
+                x.Shape()[0], y.Shape()[0]);
+        return z;
+    }
+
+    unsigned nb = DeviceManager::Curr().Prop().multiProcessorCount * 4; // 120
+    unsigned nt = 256;
+
+    VectorOp::cxamyb<<<nb, nt, 0, s>>>(z.Data(), c, x.Data(), a, y.Data(), b,
+                                       len);
+    CUDA_CHECK_LAST();
+    CUDA_CHECK(cudaStreamSynchronize(s));
+
+    return z;
+}
+
+template <typename T>
+inline Vector<T> operator+(const Vector<T>& x)
+{
+    return Linear((T) 1, x, (T) 0, x, (T) 0);
+}
+
+template <typename T>
+inline Vector<T> operator-(const Vector<T>& x)
+{
+    return Linear((T) -1, x, (T) 0, x, (T) 0);
+}
+
+template <typename T>
+inline Vector<T> operator+(T a, const Vector<T>& x)
+{
+    return Linear((T) 1, x, (T) 0, x, (T) a);
+}
+
+template <typename T>
+inline Vector<T> operator+(const Vector<T>& x, T a)
+{
+    return Linear((T) 1, x, (T) 0, x, (T) a);
+}
+
+template <typename T>
+inline Vector<T> operator-(T a, const Vector<T>& x)
+{
+    return Linear((T) -1, x, (T) 0, x, (T) a);
+}
+
+template <typename T>
+inline Vector<T> operator-(const Vector<T>& x, T a)
+{
+    return Linear((T) 1, x, (T) 0, x, (T) -a);
+}
+
+template <typename T>
 inline Vector<T> operator*(T a, const Vector<T>& x)
 {
-    return Linear((T) a, x, (T) 0, x);
+    return Linear((T) a, x, (T) 0, x, (T) 0);
 }
 
 template <typename T>
 inline Vector<T> operator*(const Vector<T>& x, T a)
 {
-    return Linear((T) a, x, (T) 0, x);
+    return Linear((T) a, x, (T) 0, x, (T) 0);
+}
+
+template <typename T>
+inline Vector<T> operator/(T a, const Vector<T>& x)
+{
+    return Power((T) a, x, (T) -1, x, (T) 0);
+}
+
+template <typename T>
+inline Vector<T> operator/(const Vector<T>& x, T a)
+{
+    return Linear((T) 1 / (T) a, x, (T) 0, x, (T) 0);
 }
 
 template <typename T>
 inline Vector<T> operator+(const Vector<T>& x, const Vector<T>& y)
 {
-    return Linear((T) 1, x, (T) 1, y);
+    return Linear((T) 1, x, (T) 1, y, (T) 0);
 }
 
 template <typename T>
 inline Vector<T> operator-(const Vector<T>& x, const Vector<T>& y)
 {
-    return Linear((T) 1, x, (T) -1, y);
+    return Linear((T) 1, x, (T) -1, y, (T) 0);
+}
+
+template <typename T>
+inline Vector<T> operator*(const Vector<T>& x, const Vector<T>& y)
+{
+    return Power((T) 1, x, (T) 1, y, (T) 1);
+}
+
+template <typename T>
+inline Vector<T> operator/(const Vector<T>& x, const Vector<T>& y)
+{
+    return Power((T) 1, x, (T) 1, y, (T) -1);
 }

@@ -36,10 +36,26 @@ TEST(Matrix, Linear)
     std::generate(y.begin(), y.end(), [i = 0]() mutable { return -(i++); });
     Matrix<int> mx(x.data(), row, col);
     Matrix<int> my(y.data(), row, col);
-    Matrix<int> mz = Linear(3, mx, 2, my);
+    Matrix<int> mz = Linear(3, mx, 2, my, 1);
     auto        pz = mz.ToCPU();
     EXPECT_TRUE(std::all_of(pz.begin(), pz.end(),
-                            [i = 0](int j) mutable { return j == +(i++); }));
+                            [i = 0](int j) mutable { return j == 1 + (i++); }));
+}
+TEST(Matrix, Power)
+{
+    constexpr std::size_t row = 201;
+    constexpr std::size_t col = 251;
+    constexpr std::size_t len = row * col;
+    std::vector<int>      x(len);
+    std::vector<int>      y(len);
+    std::generate(x.begin(), x.end(), []() { return -2; });
+    std::generate(y.begin(), y.end(), []() { return -1; });
+    Matrix<int> mx(x.data(), row, col);
+    Matrix<int> my(y.data(), row, col);
+    Matrix<int> mz = Power(3, mx, 2, my, 1);
+    auto        pz = mz.ToCPU();
+    EXPECT_TRUE(
+        std::all_of(pz.begin(), pz.end(), [](int j) { return j == -12; }));
 }
 
 TEST(Matrix, Scale)

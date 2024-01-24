@@ -5,8 +5,8 @@
 namespace MatrixOp
 {
 template <typename T>
-__global__ void axpby(T* Z, const T a, const T* X, const T b, const T* Y,
-                      unsigned n_row, unsigned n_col)
+__global__ void axpbyc(T* Z, const T a, const T* X, const T b, const T* Y,
+                       const T c, unsigned n_row, unsigned n_col)
 {
     auto col = threadIdx.x + blockIdx.x * blockDim.x;
     auto row = threadIdx.y + blockIdx.y * blockDim.y;
@@ -16,8 +16,26 @@ __global__ void axpby(T* Z, const T a, const T* X, const T b, const T* Y,
 
     for (; col < n_col; col += stride_col) {
         for (; row < n_row; row += stride_row) {
-            Z[row * n_col + col] =
-                a * X[row * n_col + col] + b * Y[row * n_col + col];
+            auto i = row * n_col + col;
+            Z[i]   = a * X[i] + b * Y[i] + c;
+        }
+    }
+}
+
+template <typename T>
+__global__ void cxamyb(T* Z, const T c, const T* X, const T a, const T* Y,
+                       const T b, unsigned n_row, unsigned n_col)
+{
+    auto col = threadIdx.x + blockIdx.x * blockDim.x;
+    auto row = threadIdx.y + blockIdx.y * blockDim.y;
+
+    auto stride_col = blockDim.x * gridDim.x;
+    auto stride_row = blockDim.y * gridDim.y;
+
+    for (; col < n_col; col += stride_col) {
+        for (; row < n_row; row += stride_row) {
+            auto i = row * n_col + col;
+            Z[i]   = c * pow(X[i], a) * pow(Y[i], b);
         }
     }
 }
@@ -45,114 +63,114 @@ __global__ void transpose(T* XT, const T* X, unsigned n_row, unsigned n_col)
 }
 
 template <typename T, unsigned tile_dim = 32>
-__global__ void gemm_small(T* C, const T* A, const T* B, unsigned m, unsigned k,
+__global__ void gemm_small(T* Z, const T* X, const T* Y, unsigned m, unsigned k,
                            unsigned n)
 {
     // Dimensions
-    //  A: m x k
-    //  B: k x n
-    //  C: m x n
+    //  X: m x k
+    //  Y: k x n
+    //  Z: m x n
     // w.r.t tile dimension of the entire matrix
     auto tile_row = blockIdx.y;
     auto tile_col = blockIdx.x;
 
-    __shared__ T As[tile_dim][tile_dim];
-    __shared__ T Bs[tile_dim][tile_dim];
+    __shared__ T Xs[tile_dim][tile_dim];
+    __shared__ T Ys[tile_dim][tile_dim];
 
     // w.r.t thread dimension of one tile
     int thread_row = threadIdx.x / tile_dim;
     int thread_col = threadIdx.x % tile_dim;
 
-    int idx_a = tile_row * tile_dim * k;
-    int idx_b = tile_col * tile_dim;
+    int idx_x = tile_row * tile_dim * k;
+    int idx_y = tile_col * tile_dim;
 
     T sum { 0 };
     // loop over tiles
     for (int itile = 0; itile < k; itile += tile_dim) {
-        int pos_a = idx_a + thread_row * k + thread_col;
-        int pos_b = idx_b + thread_row * n + thread_col;
+        int pos_x = idx_x + thread_row * k + thread_col;
+        int pos_y = idx_y + thread_row * n + thread_col;
 
-        As[thread_row][thread_col] = pos_a < m * k ? A[pos_a] : 0;
-        Bs[thread_row][thread_col] = pos_b < k * n ? B[pos_b] : 0;
+        Xs[thread_row][thread_col] = pos_x < m * k ? X[pos_x] : 0;
+        Ys[thread_row][thread_col] = pos_y < k * n ? Y[pos_y] : 0;
         __syncthreads();
 
-        idx_a += tile_dim;
-        idx_b += tile_dim * n;
+        idx_x += tile_dim;
+        idx_y += tile_dim * n;
 
         // loop over elements inside tile
         for (int j = 0; j < tile_dim; ++j) {
-            sum += As[thread_row][j] * Bs[j][thread_col];
+            sum += Xs[thread_row][j] * Ys[j][thread_col];
         }
         __syncthreads();
     }
     int row = tile_row * tile_dim + thread_row;
     int col = tile_col * tile_dim + thread_col;
 
-    if (row < m && col < n) { C[row * n + col] = sum; }
+    if (row < m && col < n) { Z[row * n + col] = sum; }
 }
 
 template <typename T, unsigned tile_m = 64, unsigned tile_k = 8,
           unsigned tile_n = 64, unsigned block_m = 8, unsigned block_n = 8>
-__global__ void gemm_large(T* C, const T* A, const T* B, unsigned m, unsigned k,
+__global__ void gemm_large(T* Z, const T* X, const T* Y, unsigned m, unsigned k,
                            unsigned n)
 {
     // Dimensions
-    //  A: m x k
-    //  B: k x n
-    //  C: m x n
+    //  X: m x k
+    //  Y: k x n
+    //  Z: m x n
     // w.r.t tile dimension of the entire matrix
     auto tile_row = blockIdx.y;
     auto tile_col = blockIdx.x;
 
-    __shared__ T As[tile_k][tile_m];
-    __shared__ T Bs[tile_k][tile_n];
+    __shared__ T Xs[tile_k][tile_m];
+    __shared__ T Ys[tile_k][tile_n];
 
     // w.r.t thread dimension of one tile
     int thread_row = threadIdx.x / (tile_n / block_n);
     int thread_col = threadIdx.x % (tile_n / block_n);
 
-    int idx_a = tile_row * tile_m * k;
-    int idx_b = tile_col * tile_n;
+    int idx_x = tile_row * tile_m * k;
+    int idx_y = tile_col * tile_n;
 
     // w.r.t the inner dimension inside a thread
-    int irow_a   = threadIdx.x / (tile_k);
-    int icol_a   = threadIdx.x % (tile_k);
-    int irow_b   = threadIdx.x / (tile_n);
-    int icol_b   = threadIdx.x % (tile_n);
-    int stride_a = blockDim.x / tile_k;
-    int stride_b = blockDim.x / tile_n;
+    int irow_x   = threadIdx.x / (tile_k);
+    int icol_x   = threadIdx.x % (tile_k);
+    int irow_y   = threadIdx.x / (tile_n);
+    int icol_y   = threadIdx.x % (tile_n);
+    int stride_x = blockDim.x / tile_k;
+    int stride_y = blockDim.x / tile_n;
 
     T sum[block_m * block_n] = { 0 };
-    T tmp_a[block_m]         = { 0 };
-    T tmp_b[block_n]         = { 0 };
+    T tmp_x[block_m]         = { 0 };
+    T tmp_y[block_n]         = { 0 };
 
     // loop over tiles
     for (int itile = 0; itile < k; itile += tile_k) {
-        for (int offset = 0; offset < tile_m; offset += stride_a) {
-            int pos_a = idx_a + (irow_a + offset) * k + icol_a;
-            As[icol_a][irow_a + offset] = pos_a < m * k ? A[pos_a] : 0;
+        for (int offset = 0; offset < tile_m; offset += stride_x) {
+            int pos_x = idx_x + (irow_x + offset) * k + icol_x;
+            Xs[icol_x][irow_x + offset] = pos_x < m * k ? X[pos_x] : 0;
         }
-        for (int offset = 0; offset < tile_k; offset += stride_b) {
-            int pos_b = idx_b + (irow_b + offset) * n + icol_b;
-            Bs[irow_b + offset][icol_b] = pos_b < k * n ? B[pos_b] : 0;
+        for (int offset = 0; offset < tile_k; offset += stride_y) {
+            int pos_y = idx_y + (irow_y + offset) * n + icol_y;
+            Ys[irow_y + offset][icol_y] = pos_y < k * n ? Y[pos_y] : 0;
         }
         __syncthreads();
 
-        idx_a += tile_k;
-        idx_b += tile_k * n;
+        idx_x += tile_k;
+        idx_y += tile_k * n;
 
         // loop over blocks inside tile
         for (int iblock = 0; iblock < tile_k; ++iblock) {
             // loop over elements in block
             for (int i = 0; i < block_m; ++i) {
-                tmp_a[i] = As[iblock][thread_row * block_m + i];
+                tmp_x[i] = Xs[iblock][thread_row * block_m + i];
             }
             for (int i = 0; i < block_n; ++i) {
-                tmp_b[i] = Bs[iblock][thread_col * block_n + i];
+                tmp_y[i] = Ys[iblock][thread_col * block_n + i];
             }
             for (int im = 0; im < block_m; ++im) {
                 for (int in = 0; in < block_n; ++in) {
-                    sum[im * block_n + in] += tmp_a[im] * tmp_b[in];
+                    sum[im * block_n + in] += tmp_x[im] * tmp_y[in];
                 }
             }
         }
@@ -164,7 +182,7 @@ __global__ void gemm_large(T* C, const T* A, const T* B, unsigned m, unsigned k,
 
     for (int im = 0; im < block_m && row + im < m; ++im) {
         for (int in = 0; in < block_n && col + in < n; ++in) {
-            C[(row + im) * n + (col + in)] = sum[im * block_n + in];
+            Z[(row + im) * n + (col + in)] = sum[im * block_n + in];
         }
     }
 }

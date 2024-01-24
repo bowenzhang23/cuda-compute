@@ -132,7 +132,7 @@ inline Matrix<T> Matrix<T>::Transpose() const
 }
 
 template <typename T>
-inline Matrix<T> Linear(T a, const Matrix<T>& x, T b, const Matrix<T>& y)
+inline Matrix<T> Linear(T a, const Matrix<T>& x, T b, const Matrix<T>& y, T c)
 {
     cudaStream_t s     = x.S();
     auto         n_row = std::min(x.Nrow(), y.Nrow());
@@ -144,14 +144,21 @@ inline Matrix<T> Linear(T a, const Matrix<T>& x, T b, const Matrix<T>& y)
     }
 
     Matrix<T> z(n_row, n_col, s);
-    if (x.Shape() != y.Shape()) return z;
+    if (x.Shape() != y.Shape()) {
+        fprintf(
+            stdout,
+            "Shape of x [%lu %lu] is not compatible with that of y [%lu %lu]"
+            ", will return empty matrix\n",
+            x.Shape()[0], x.Shape()[1], y.Shape()[0], y.Shape()[1]);
+        return z;
+    }
 
     auto sm_count = DeviceManager::Curr().Prop().multiProcessorCount;
     dim3 nb       = { (unsigned) sm_count, 4 }; // 120
     dim3 nt       = { 32, 8 };
 
-    MatrixOp::axpby<<<nb, nt, 0, s>>>(z.Data(), a, x.Data(), b, y.Data(), n_row,
-                                      n_col);
+    MatrixOp::axpbyc<<<nb, nt, 0, s>>>(z.Data(), a, x.Data(), b, y.Data(), c,
+                                       n_row, n_col);
     CUDA_CHECK_LAST();
     CUDA_CHECK(cudaStreamSynchronize(s));
 
@@ -159,44 +166,145 @@ inline Matrix<T> Linear(T a, const Matrix<T>& x, T b, const Matrix<T>& y)
 }
 
 template <typename T>
+inline Matrix<T> Power(T c, const Matrix<T>& x, T a, const Matrix<T>& y, T b)
+{
+    cudaStream_t s     = x.S();
+    auto         n_row = std::min(x.Nrow(), y.Nrow());
+    auto         n_col = std::min(x.Ncol(), y.Ncol());
+
+    if (x.S() != y.S()) {
+        CUDA_CHECK(cudaDeviceSynchronize());
+        s = 0;
+    }
+
+    Matrix<T> z(n_row, n_col, s);
+    if (x.Shape() != y.Shape()) {
+        fprintf(
+            stdout,
+            "Shape of x [%lu %lu] is not compatible with that of y [%lu %lu]"
+            ", will return empty matrix\n",
+            x.Shape()[0], x.Shape()[1], y.Shape()[0], y.Shape()[1]);
+        return z;
+    }
+
+    auto sm_count = DeviceManager::Curr().Prop().multiProcessorCount;
+    dim3 nb       = { (unsigned) sm_count, 4 }; // 120
+    dim3 nt       = { 32, 8 };
+
+    MatrixOp::cxamyb<<<nb, nt, 0, s>>>(z.Data(), c, x.Data(), a, y.Data(), b,
+                                       n_row, n_col);
+    CUDA_CHECK_LAST();
+    CUDA_CHECK(cudaStreamSynchronize(s));
+
+    return z;
+}
+
+template <typename T>
+inline Matrix<T> operator+(const Matrix<T>& x)
+{
+    return Linear((T) 1, x, (T) 0, x, (T) 0);
+}
+
+template <typename T>
+inline Matrix<T> operator-(const Matrix<T>& x)
+{
+    return Linear((T) -1, x, (T) 0, x, (T) 0);
+}
+
+template <typename T>
+inline Matrix<T> operator+(T a, const Matrix<T>& x)
+{
+    return Linear((T) 1, x, (T) 0, x, (T) a);
+}
+
+template <typename T>
+inline Matrix<T> operator+(const Matrix<T>& x, T a)
+{
+    return Linear((T) 1, x, (T) 0, x, (T) a);
+}
+
+template <typename T>
+inline Matrix<T> operator-(T a, const Matrix<T>& x)
+{
+    return Linear((T) -1, x, (T) 0, x, (T) a);
+}
+
+template <typename T>
+inline Matrix<T> operator-(const Matrix<T>& x, T a)
+{
+    return Linear((T) 1, x, (T) 0, x, (T) -a);
+}
+
+template <typename T>
 inline Matrix<T> operator*(T a, const Matrix<T>& x)
 {
-    return Linear((T) a, x, (T) 0, x);
+    return Linear((T) a, x, (T) 0, x, (T) 0);
 }
 
 template <typename T>
 inline Matrix<T> operator*(const Matrix<T>& x, T a)
 {
-    return Linear((T) a, x, (T) 0, x);
+    return Linear((T) a, x, (T) 0, x, (T) 0);
+}
+
+template <typename T>
+inline Matrix<T> operator/(T a, const Matrix<T>& x)
+{
+    return Power((T) a, x, (T) -1, x, (T) 0);
+}
+
+template <typename T>
+inline Matrix<T> operator/(const Matrix<T>& x, T a)
+{
+    return Linear((T) 1 / (T) a, x, (T) 0, x, (T) 0);
 }
 
 template <typename T>
 inline Matrix<T> operator+(const Matrix<T>& x, const Matrix<T>& y)
 {
-    return Linear((T) 1, x, (T) 1, y);
+    return Linear((T) 1, x, (T) 1, y, (T) 0);
 }
 
 template <typename T>
 inline Matrix<T> operator-(const Matrix<T>& x, const Matrix<T>& y)
 {
-    return Linear((T) 1, x, (T) -1, y);
+    return Linear((T) 1, x, (T) -1, y, (T) 0);
 }
 
 template <typename T>
-inline Matrix<T> MatMulSmall(const Matrix<T>& a, const Matrix<T>& b)
+inline Matrix<T> operator*(const Matrix<T>& x, const Matrix<T>& y)
 {
-    cudaStream_t s = a.S();
-    if (a.S() != b.S()) {
+    return Power((T) 1, x, (T) 1, y, (T) 1);
+}
+
+template <typename T>
+inline Matrix<T> operator/(const Matrix<T>& x, const Matrix<T>& y)
+{
+    return Power((T) 1, x, (T) 1, y, (T) -1);
+}
+
+template <typename T>
+inline Matrix<T> MatMulSmall(const Matrix<T>& x, const Matrix<T>& y)
+{
+    cudaStream_t s = x.S();
+    if (x.S() != y.S()) {
         CUDA_CHECK(cudaDeviceSynchronize());
         s = 0;
     }
 
-    Matrix<T> c(a.Nrow(), b.Ncol(), s);
-    if (a.Ncol() != b.Nrow()) return c;
+    Matrix<T> z(x.Nrow(), y.Ncol(), s);
+    if (x.Ncol() != y.Nrow()) {
+        fprintf(
+            stdout,
+            "Shape of x [%lu %lu] is not compatible with that of y [%lu %lu]"
+            ", will return empty matrix\n",
+            x.Shape()[0], x.Shape()[1], y.Shape()[0], y.Shape()[1]);
+        return z;
+    }
 
-    unsigned m = (unsigned) a.Nrow();
-    unsigned k = (unsigned) a.Ncol();
-    unsigned n = (unsigned) b.Ncol();
+    unsigned m = (unsigned) x.Nrow();
+    unsigned k = (unsigned) x.Ncol();
+    unsigned n = (unsigned) y.Ncol();
 
     constexpr unsigned t = 32;
 
@@ -204,28 +312,35 @@ inline Matrix<T> MatMulSmall(const Matrix<T>& a, const Matrix<T>& b)
     dim3 nt = { t * t };
 
     MatrixOp::gemm_small<T, t>
-        <<<nb, nt, 0, s>>>(c.Data(), a.Data(), b.Data(), m, k, n);
+        <<<nb, nt, 0, s>>>(z.Data(), x.Data(), y.Data(), m, k, n);
 
     CUDA_CHECK_LAST();
     CUDA_CHECK(cudaStreamSynchronize(s));
-    return c;
+    return z;
 }
 
 template <typename T>
-inline Matrix<T> MatMulLarge(const Matrix<T>& a, const Matrix<T>& b)
+inline Matrix<T> MatMulLarge(const Matrix<T>& x, const Matrix<T>& y)
 {
-    cudaStream_t s = a.S();
-    if (a.S() != b.S()) {
+    cudaStream_t s = x.S();
+    if (x.S() != y.S()) {
         CUDA_CHECK(cudaDeviceSynchronize());
         s = 0;
     }
 
-    Matrix<T> c(a.Nrow(), b.Ncol(), s);
-    if (a.Ncol() != b.Nrow()) return c;
+    Matrix<T> z(x.Nrow(), y.Ncol(), s);
+    if (x.Ncol() != y.Nrow()) {
+        fprintf(
+            stdout,
+            "Shape of x [%lu %lu] is not compatible with that of y [%lu %lu]"
+            ", will return empty matrix\n",
+            x.Shape()[0], x.Shape()[1], y.Shape()[0], y.Shape()[1]);
+        return z;
+    }
 
-    unsigned m = (unsigned) a.Nrow();
-    unsigned k = (unsigned) a.Ncol();
-    unsigned n = (unsigned) b.Ncol();
+    unsigned m = (unsigned) x.Nrow();
+    unsigned k = (unsigned) x.Ncol();
+    unsigned n = (unsigned) y.Ncol();
 
     constexpr unsigned tile_m  = 64;
     constexpr unsigned tile_k  = 8;
@@ -237,22 +352,22 @@ inline Matrix<T> MatMulLarge(const Matrix<T>& a, const Matrix<T>& b)
     dim3 nt = { tile_m * tile_n / block_m / block_n };
 
     MatrixOp::gemm_large<T, tile_m, tile_k, tile_n, block_m, block_n>
-        <<<nb, nt, 0, s>>>(c.Data(), a.Data(), b.Data(), m, k, n);
+        <<<nb, nt, 0, s>>>(z.Data(), x.Data(), y.Data(), m, k, n);
 
     CUDA_CHECK_LAST();
     CUDA_CHECK(cudaStreamSynchronize(s));
-    return c;
+    return z;
 }
 
 template <typename T>
-inline Matrix<T> MatMul(const Matrix<T>& a, const Matrix<T>& b)
+inline Matrix<T> MatMul(const Matrix<T>& x, const Matrix<T>& y)
 {
-    unsigned m = (unsigned) a.Nrow();
-    unsigned k = (unsigned) a.Ncol();
-    unsigned n = (unsigned) b.Ncol();
+    unsigned m = (unsigned) x.Nrow();
+    unsigned k = (unsigned) x.Ncol();
+    unsigned n = (unsigned) y.Ncol();
     if (m > 512 && n > 512 && k > 256) {
-        return MatMulLarge(a, b);
+        return MatMulLarge(x, y);
     } else {
-        return MatMulSmall(a, b);
+        return MatMulSmall(x, y);
     }
 }
