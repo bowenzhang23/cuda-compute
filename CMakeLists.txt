@@ -1,7 +1,18 @@
 cmake_minimum_required(VERSION 3.20)
 
-add_compile_options(-std=c++20 -O0 -g -Wextra -Wall -Waddress)
-# add_compile_options(-std=c++20 -O3 -Wextra -Wall -Waddress)
+add_compile_options(
+  -std=c++20
+  -Wextra
+  -Wall
+  -Waddress
+  $<$<CONFIG:DEBUG>:-g3>
+  $<$<CONFIG:DEBUG>:-O0>
+  $<$<CONFIG:RELEASE>:-O3>)
+
+add_compile_definitions(
+  $<$<CONFIG:DEBUG>:DEBUG_CONSTRUCTOR>
+  $<$<CONFIG:DEBUG>:DEBUG_PERFORMANCE>)
+
 set(CMAKE_C_COMPILER gcc-12)
 set(CMAKE_CXX_COMPILER g++-12)
 enable_testing()

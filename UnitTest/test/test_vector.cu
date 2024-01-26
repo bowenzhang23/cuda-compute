@@ -100,6 +100,20 @@ TEST(Vector, Power)
         std::all_of(pz.begin(), pz.end(), [](int j) { return j == -12; }));
 }
 
+TEST(Vector, Binary)
+{
+    constexpr std::size_t len = 4001;
+    std::vector<int>      x(len);
+    std::vector<int>      y(len);
+    std::generate(x.begin(), x.end(), [i = 0]() mutable { return 1 - (i++) % 2; });
+    std::generate(y.begin(), y.end(), [i = 0]() mutable { return (i++) % 2; });
+    Vector<int> vx(x.data(), len);
+    Vector<int> vy(y.data(), len);
+    Vector<int> vz = Binary<int, int>(vx, vy, BinaryOp::GT);
+    auto        pz = vz.ToCPU();
+    EXPECT_EQ(pz, x);
+}
+
 TEST(Vector, Scale)
 {
     constexpr std::size_t len = 4001;

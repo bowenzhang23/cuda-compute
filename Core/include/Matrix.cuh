@@ -1,5 +1,6 @@
 #pragma once
 
+#include "CommonOp.cuh"
 #include "CudaData.cuh"
 #include "DeviceManager.cuh"
 #include "MatrixOp.cuh"
@@ -159,15 +160,14 @@ inline Matrix<T> Linear(T a, const Matrix<T>& x, T b, const Matrix<T>& y, T c)
         return z;
     }
 
-    auto sm_count = DeviceManager::Curr().Prop().multiProcessorCount;
-    dim3 nb       = { (unsigned) sm_count, 4 }; // 120
-    dim3 nt       = { 32, 8 };
+    unsigned nb = DeviceManager::Curr().Prop().multiProcessorCount * 4;
+    unsigned nt = 256;
 
 #ifdef DEBUG_PERFORMANCE
     Timer::Instance().Tick(s);
 #endif
-    MatrixOp::axpbyc<<<nb, nt, 0, s>>>(z.Data(), a, x.Data(), b, y.Data(), c,
-                                       n_row, n_col);
+    CommonOp::axpbyc<<<nb, nt, 0, s>>>(z.Data(), a, x.Data(), b, y.Data(), c,
+                                       n_row * n_col);
 #ifdef DEBUG_PERFORMANCE
     Timer::Instance().Tick(s);
     Timer::Instance().ShowElapsedTime("Matrix Linear");
@@ -201,15 +201,81 @@ inline Matrix<T> Power(T c, const Matrix<T>& x, T a, const Matrix<T>& y, T b)
         return z;
     }
 
-    auto sm_count = DeviceManager::Curr().Prop().multiProcessorCount;
-    dim3 nb       = { (unsigned) sm_count, 4 }; // 120
-    dim3 nt       = { 32, 8 };
+    unsigned nb = DeviceManager::Curr().Prop().multiProcessorCount * 4;
+    unsigned nt = 256;
 
 #ifdef DEBUG_PERFORMANCE
     Timer::Instance().Tick(s);
 #endif
-    MatrixOp::cxamyb<<<nb, nt, 0, s>>>(z.Data(), c, x.Data(), a, y.Data(), b,
-                                       n_row, n_col);
+    CommonOp::cxamyb<<<nb, nt, 0, s>>>(z.Data(), c, x.Data(), a, y.Data(), b,
+                                       n_row * n_col);
+#ifdef DEBUG_PERFORMANCE
+    Timer::Instance().Tick(s);
+    Timer::Instance().ShowElapsedTime("Matrix Power");
+#endif
+
+    CUDA_CHECK_LAST();
+    CUDA_CHECK(cudaStreamSynchronize(s));
+
+    return z;
+}
+
+template <typename T1, typename T2, typename BinaryFunc>
+inline Matrix<T1> Binary(const Matrix<T2>& x, const Matrix<T2>& y,
+                         BinaryFunc func)
+{
+    cudaStream_t s     = x.S();
+    auto         n_row = std::min(x.Nrow(), y.Nrow());
+    auto         n_col = std::min(x.Ncol(), y.Ncol());
+
+    if (x.S() != y.S()) {
+        CUDA_CHECK(cudaDeviceSynchronize());
+        s = 0;
+    }
+
+    Matrix<T1> z(n_row, n_col, s);
+    if (x.Shape() != y.Shape()) {
+        fprintf(
+            stdout,
+            "Shape of x [%lu %lu] is not compatible with that of y [%lu %lu]"
+            ", will return empty matrix\n",
+            x.Shape()[0], x.Shape()[1], y.Shape()[0], y.Shape()[1]);
+        return z;
+    }
+
+    unsigned nb = DeviceManager::Curr().Prop().multiProcessorCount * 4;
+    unsigned nt = 256;
+
+#ifdef DEBUG_PERFORMANCE
+    Timer::Instance().Tick(s);
+#endif
+    CommonOp::binary<T1, T2>
+        <<<nb, nt, 0, s>>>(z.Data(), x.Data(), y.Data(), func, n_row * n_col);
+#ifdef DEBUG_PERFORMANCE
+    Timer::Instance().Tick(s);
+    Timer::Instance().ShowElapsedTime("Matrix Power");
+#endif
+
+    CUDA_CHECK_LAST();
+    CUDA_CHECK(cudaStreamSynchronize(s));
+
+    return z;
+}
+
+template <typename T1, typename T2, typename BinaryFunc>
+inline Matrix<T1> Binary(const Matrix<T2>& x, T2 y, BinaryFunc func)
+{
+    cudaStream_t s = x.S();
+    Matrix<T1>   z(x.Nrow(), x.Ncol(), s);
+
+    unsigned nb = DeviceManager::Curr().Prop().multiProcessorCount * 4;
+    unsigned nt = 256;
+
+#ifdef DEBUG_PERFORMANCE
+    Timer::Instance().Tick(s);
+#endif
+    CommonOp::binary<T1, T2>
+        <<<nb, nt, 0, s>>>(z.Data(), x.Data(), y, func, x.Nrow() * x.Ncol());
 #ifdef DEBUG_PERFORMANCE
     Timer::Instance().Tick(s);
     Timer::Instance().ShowElapsedTime("Matrix Power");
@@ -282,6 +348,78 @@ inline Matrix<T> operator/(const Matrix<T>& x, T a)
 }
 
 template <typename T>
+inline Matrix<int> operator==(const Matrix<T>& x, T a)
+{
+    return Binary<int, T>(x, a, BinaryOp::EQ);
+}
+
+template <typename T>
+inline Matrix<int> operator==(T a, const Matrix<T>& x)
+{
+    return x == a;
+}
+
+template <typename T>
+inline Matrix<int> operator!=(const Matrix<T>& x, T a)
+{
+    return Binary<int, T>(x, a, BinaryOp::NE);
+}
+
+template <typename T>
+inline Matrix<int> operator!=(T a, const Matrix<T>& x)
+{
+    return x != a;
+}
+
+template <typename T>
+inline Matrix<int> operator<(const Matrix<T>& x, T a)
+{
+    return Binary<int, T>(x, a, BinaryOp::LT);
+}
+
+template <typename T>
+inline Matrix<int> operator<(T a, const Matrix<T>& x)
+{
+    return x > a;
+}
+
+template <typename T>
+inline Matrix<int> operator<=(const Matrix<T>& x, T a)
+{
+    return Binary<int, T>(x, a, BinaryOp::LE);
+}
+
+template <typename T>
+inline Matrix<int> operator<=(T a, const Matrix<T>& x)
+{
+    return x >= a;
+}
+
+template <typename T>
+inline Matrix<int> operator>(const Matrix<T>& x, T a)
+{
+    return Binary<int, T>(x, a, BinaryOp::GT);
+}
+
+template <typename T>
+inline Matrix<int> operator>(T a, const Matrix<T>& x)
+{
+    return x < a;
+}
+
+template <typename T>
+inline Matrix<int> operator>=(const Matrix<T>& x, T a)
+{
+    return Binary<int, T>(x, a, BinaryOp::GE);
+}
+
+template <typename T>
+inline Matrix<int> operator>=(T a, const Matrix<T>& x)
+{
+    return x <= a;
+}
+
+template <typename T>
 inline Matrix<T> operator+(const Matrix<T>& x, const Matrix<T>& y)
 {
     return Linear((T) 1, x, (T) 1, y, (T) 0);
@@ -303,6 +441,42 @@ template <typename T>
 inline Matrix<T> operator/(const Matrix<T>& x, const Matrix<T>& y)
 {
     return Power((T) 1, x, (T) 1, y, (T) -1);
+}
+
+template <typename T>
+inline Matrix<int> operator==(const Matrix<T>& x, const Matrix<T>& y)
+{
+    return Binary<int, T>(x, y, BinaryOp::EQ);
+}
+
+template <typename T>
+inline Matrix<int> operator!=(const Matrix<T>& x, const Matrix<T>& y)
+{
+    return Binary<int, T>(x, y, BinaryOp::NE);
+}
+
+template <typename T>
+inline Matrix<int> operator<(const Matrix<T>& x, const Matrix<T>& y)
+{
+    return Binary<int, T>(x, y, BinaryOp::LT);
+}
+
+template <typename T>
+inline Matrix<int> operator<=(const Matrix<T>& x, const Matrix<T>& y)
+{
+    return Binary<int, T>(x, y, BinaryOp::LE);
+}
+
+template <typename T>
+inline Matrix<int> operator>(const Matrix<T>& x, const Matrix<T>& y)
+{
+    return Binary<int, T>(x, y, BinaryOp::GT);
+}
+
+template <typename T>
+inline Matrix<int> operator>=(const Matrix<T>& x, const Matrix<T>& y)
+{
+    return Binary<int, T>(x, y, BinaryOp::GE);
 }
 
 template <typename T>

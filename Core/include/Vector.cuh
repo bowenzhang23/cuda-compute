@@ -1,5 +1,6 @@
 #pragma once
 
+#include "CommonOp.cuh"
 #include "CudaData.cuh"
 #include "DeviceManager.cuh"
 #include "VectorOp.cuh"
@@ -116,13 +117,13 @@ inline Vector<T> Linear(T a, const Vector<T>& x, T b, const Vector<T>& y, T c)
         return z;
     }
 
-    unsigned nb = DeviceManager::Curr().Prop().multiProcessorCount * 4; // 120
+    unsigned nb = DeviceManager::Curr().Prop().multiProcessorCount * 4;
     unsigned nt = 256;
 
 #ifdef DEBUG_PERFORMANCE
     Timer::Instance().Tick(s);
 #endif
-    VectorOp::axpbyc<<<nb, nt, 0, s>>>(z.Data(), a, x.Data(), b, y.Data(), c,
+    CommonOp::axpbyc<<<nb, nt, 0, s>>>(z.Data(), a, x.Data(), b, y.Data(), c,
                                        len);
 #ifdef DEBUG_PERFORMANCE
     Timer::Instance().Tick(s);
@@ -154,14 +155,77 @@ inline Vector<T> Power(T c, const Vector<T>& x, T a, const Vector<T>& y, T b)
         return z;
     }
 
-    unsigned nb = DeviceManager::Curr().Prop().multiProcessorCount * 4; // 120
+    unsigned nb = DeviceManager::Curr().Prop().multiProcessorCount * 4;
     unsigned nt = 256;
 
 #ifdef DEBUG_PERFORMANCE
     Timer::Instance().Tick(s);
 #endif
-    VectorOp::cxamyb<<<nb, nt, 0, s>>>(z.Data(), c, x.Data(), a, y.Data(), b,
+    CommonOp::cxamyb<<<nb, nt, 0, s>>>(z.Data(), c, x.Data(), a, y.Data(), b,
                                        len);
+#ifdef DEBUG_PERFORMANCE
+    Timer::Instance().Tick(s);
+    Timer::Instance().ShowElapsedTime("Vector Power");
+#endif
+
+    CUDA_CHECK_LAST();
+    CUDA_CHECK(cudaStreamSynchronize(s));
+
+    return z;
+}
+
+template <typename T1, typename T2>
+inline Vector<T1> Binary(const Vector<T2>& x, const Vector<T2>& y, BinaryOp op)
+{
+    cudaStream_t s   = x.S();
+    auto         len = std::min(x.Nlen(), y.Nlen());
+
+    if (x.S() != y.S()) {
+        CUDA_CHECK(cudaDeviceSynchronize());
+        s = 0;
+    }
+    Vector<T1> z(len, s);
+    if (x.Shape() != y.Shape()) {
+        fprintf(stdout,
+                "Shape of x [%lu] is not compatible with that of y [%lu]"
+                ", will return empty matrix\n",
+                x.Shape()[0], y.Shape()[0]);
+        return z;
+    }
+
+    unsigned nb = DeviceManager::Curr().Prop().multiProcessorCount * 4;
+    unsigned nt = 256;
+
+#ifdef DEBUG_PERFORMANCE
+    Timer::Instance().Tick(s);
+#endif
+    CommonOp::binary<T1, T2>
+        <<<nb, nt, 0, s>>>(z.Data(), x.Data(), y.Data(), op, x.Nlen());
+#ifdef DEBUG_PERFORMANCE
+    Timer::Instance().Tick(s);
+    Timer::Instance().ShowElapsedTime("Vector Power");
+#endif
+
+    CUDA_CHECK_LAST();
+    CUDA_CHECK(cudaStreamSynchronize(s));
+
+    return z;
+}
+
+template <typename T1, typename T2>
+inline Vector<T1> Binary(const Vector<T2>& x, T2 y, BinaryOp op)
+{
+    cudaStream_t s = x.S();
+    Vector<T1>   z(x.Nlen(), s);
+
+    unsigned nb = DeviceManager::Curr().Prop().multiProcessorCount * 4;
+    unsigned nt = 256;
+
+#ifdef DEBUG_PERFORMANCE
+    Timer::Instance().Tick(s);
+#endif
+    CommonOp::binary<T1, T2>
+        <<<nb, nt, 0, s>>>(z.Data(), x.Data(), y, op, x.Nlen());
 #ifdef DEBUG_PERFORMANCE
     Timer::Instance().Tick(s);
     Timer::Instance().ShowElapsedTime("Vector Power");
@@ -234,6 +298,78 @@ inline Vector<T> operator/(const Vector<T>& x, T a)
 }
 
 template <typename T>
+inline Vector<int> operator==(const Vector<T>& x, T a)
+{
+    return Binary<int, T>(x, a, BinaryOp::EQ);
+}
+
+template <typename T>
+inline Vector<int> operator==(T a, const Vector<T>& x)
+{
+    return x == a;
+}
+
+template <typename T>
+inline Vector<int> operator!=(const Vector<T>& x, T a)
+{
+    return Binary<int, T>(x, a, BinaryOp::NE);
+}
+
+template <typename T>
+inline Vector<int> operator!=(T a, const Vector<T>& x)
+{
+    return x != a;
+}
+
+template <typename T>
+inline Vector<int> operator<(const Vector<T>& x, T a)
+{
+    return Binary<int, T>(x, a, BinaryOp::LT);
+}
+
+template <typename T>
+inline Vector<int> operator<(T a, const Vector<T>& x)
+{
+    return x > a;
+}
+
+template <typename T>
+inline Vector<int> operator<=(const Vector<T>& x, T a)
+{
+    return Binary<int, T>(x, a, BinaryOp::LE);
+}
+
+template <typename T>
+inline Vector<int> operator<=(T a, const Vector<T>& x)
+{
+    return x >= a;
+}
+
+template <typename T>
+inline Vector<int> operator>(const Vector<T>& x, T a)
+{
+    return Binary<int, T>(x, a, BinaryOp::GT);
+}
+
+template <typename T>
+inline Vector<int> operator>(T a, const Vector<T>& x)
+{
+    return x < a;
+}
+
+template <typename T>
+inline Vector<int> operator>=(const Vector<T>& x, T a)
+{
+    return Binary<int, T>(x, a, BinaryOp::GE);
+}
+
+template <typename T>
+inline Vector<int> operator>=(T a, const Vector<T>& x)
+{
+    return x <= a;
+}
+
+template <typename T>
 inline Vector<T> operator+(const Vector<T>& x, const Vector<T>& y)
 {
     return Linear((T) 1, x, (T) 1, y, (T) 0);
@@ -255,4 +391,40 @@ template <typename T>
 inline Vector<T> operator/(const Vector<T>& x, const Vector<T>& y)
 {
     return Power((T) 1, x, (T) 1, y, (T) -1);
+}
+
+template <typename T>
+inline Vector<int> operator==(const Vector<T>& x, const Vector<T>& y)
+{
+    return Binary<int, T>(x, y, BinaryOp::EQ);
+}
+
+template <typename T>
+inline Vector<int> operator!=(const Vector<T>& x, const Vector<T>& y)
+{
+    return Binary<int, T>(x, y, BinaryOp::NE);
+}
+
+template <typename T>
+inline Vector<int> operator<(const Vector<T>& x, const Vector<T>& y)
+{
+    return Binary<int, T>(x, y, BinaryOp::LT);
+}
+
+template <typename T>
+inline Vector<int> operator<=(const Vector<T>& x, const Vector<T>& y)
+{
+    return Binary<int, T>(x, y, BinaryOp::LE);
+}
+
+template <typename T>
+inline Vector<int> operator>(const Vector<T>& x, const Vector<T>& y)
+{
+    return Binary<int, T>(x, y, BinaryOp::GT);
+}
+
+template <typename T>
+inline Vector<int> operator>=(const Vector<T>& x, const Vector<T>& y)
+{
+    return Binary<int, T>(x, y, BinaryOp::GE);
 }

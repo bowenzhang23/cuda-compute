@@ -10,44 +10,81 @@ using namespace nb::literals;
 
 using Vectorf = Vector<float>;
 using Vectori = Vector<int>;
+using Vectorb = Vector<bool>;
 
 using Matrixf = Matrix<float>;
 using Matrixi = Matrix<int>;
+using Matrixb = Matrix<bool>;
 
-template <typename T, typename ContainerType, typename ElementType>
+template <typename T, typename ContType, typename ElemType>
 [[maybe_unused]] T& add_arithmetic(T& nb_class)
 {
-    return nb_class.def("__pos__", [](const ContainerType& a) { return a; })
-        .def("__neg__", [](const ContainerType& a) { return -a; })
+    return nb_class.def("__pos__", [](const ContType& a) { return a; })
+        .def("__neg__", [](const ContType& a) { return -a; })
         .def("__pow__",
-             [](const ContainerType& a, const ElementType b) {
-                 return Power((ElementType) 1, a, b, a, (ElementType) 0);
+             [](const ContType& a, const ElemType b) {
+                 return Power((ElemType) 1, a, b, a, (ElemType) 0);
              })
         .def("__add__",
-             [](const ContainerType& a, const ElementType b) { return a + b; })
+             [](const ContType& a, const ElemType b) { return a + b; })
         .def("__radd__",
-             [](const ContainerType& a, const ElementType b) { return b + a; })
+             [](const ContType& a, const ElemType b) { return b + a; })
         .def("__sub__",
-             [](const ContainerType& a, const ElementType b) { return a - b; })
+             [](const ContType& a, const ElemType b) { return a - b; })
         .def("__rsub__",
-             [](const ContainerType& a, const ElementType b) { return b - a; })
+             [](const ContType& a, const ElemType b) { return b - a; })
         .def("__mul__",
-             [](const ContainerType& a, const ElementType b) { return a * b; })
+             [](const ContType& a, const ElemType b) { return a * b; })
         .def("__rmul__",
-             [](const ContainerType& a, const ElementType b) { return b * a; })
+             [](const ContType& a, const ElemType b) { return b * a; })
         .def("__truediv__",
-             [](const ContainerType& a, const ElementType b) { return a / b; })
+             [](const ContType& a, const ElemType b) { return a / b; })
         .def("__rtruediv__",
-             [](const ContainerType& a, const ElementType b) { return b / a; })
-        .def("__add__", [](const ContainerType& a,
-                           const ContainerType& b) { return a + b; })
-        .def("__sub__", [](const ContainerType& a,
-                           const ContainerType& b) { return a - b; })
-        .def("__mul__", [](const ContainerType& a,
-                           const ContainerType& b) { return a * b; })
-        .def("__truediv__", [](const ContainerType& a, const ContainerType& b) {
-            return a / b;
-        });
+             [](const ContType& a, const ElemType b) { return b / a; })
+        .def("__eq__",
+             [](const ContType& a, const ElemType b) { return a == b; })
+        .def("__req__",
+             [](const ContType& a, const ElemType b) { return b == a; })
+        .def("__ne__",
+             [](const ContType& a, const ElemType b) { return a != b; })
+        .def("__rne__",
+             [](const ContType& a, const ElemType b) { return b != a; })
+        .def("__gt__",
+             [](const ContType& a, const ElemType b) { return a > b; })
+        .def("__rgt__",
+             [](const ContType& a, const ElemType b) { return b > a; })
+        .def("__ge__",
+             [](const ContType& a, const ElemType b) { return a >= b; })
+        .def("__rge__",
+             [](const ContType& a, const ElemType b) { return b >= a; })
+        .def("__lt__",
+             [](const ContType& a, const ElemType b) { return a < b; })
+        .def("__rlt__",
+             [](const ContType& a, const ElemType b) { return b < a; })
+        .def("__le__",
+             [](const ContType& a, const ElemType b) { return a <= b; })
+        .def("__rle__",
+             [](const ContType& a, const ElemType b) { return b <= a; })
+        .def("__add__",
+             [](const ContType& a, const ContType& b) { return a + b; })
+        .def("__sub__",
+             [](const ContType& a, const ContType& b) { return a - b; })
+        .def("__mul__",
+             [](const ContType& a, const ContType& b) { return a * b; })
+        .def("__truediv__",
+             [](const ContType& a, const ContType& b) { return a / b; })
+        .def("__eq__",
+             [](const ContType& a, const ContType& b) { return a == b; })
+        .def("__ne__",
+             [](const ContType& a, const ContType& b) { return a != b; })
+        .def("__gt__",
+             [](const ContType& a, const ContType& b) { return a > b; })
+        .def("__ge__",
+             [](const ContType& a, const ContType& b) { return a >= b; })
+        .def("__lt__",
+             [](const ContType& a, const ContType& b) { return a < b; })
+        .def("__le__",
+             [](const ContType& a, const ContType& b) { return a <= b; });
 }
 
 NB_MODULE(cuda_compute, m)

@@ -4,42 +4,6 @@
 
 namespace MatrixOp
 {
-template <typename T>
-__global__ void axpbyc(T* Z, const T a, const T* X, const T b, const T* Y,
-                       const T c, unsigned n_row, unsigned n_col)
-{
-    auto col = threadIdx.x + blockIdx.x * blockDim.x;
-    auto row = threadIdx.y + blockIdx.y * blockDim.y;
-
-    auto stride_col = blockDim.x * gridDim.x;
-    auto stride_row = blockDim.y * gridDim.y;
-
-    for (; col < n_col; col += stride_col) {
-        for (; row < n_row; row += stride_row) {
-            auto i = row * n_col + col;
-            Z[i]   = a * X[i] + b * Y[i] + c;
-        }
-    }
-}
-
-template <typename T>
-__global__ void cxamyb(T* Z, const T c, const T* X, const T a, const T* Y,
-                       const T b, unsigned n_row, unsigned n_col)
-{
-    auto col = threadIdx.x + blockIdx.x * blockDim.x;
-    auto row = threadIdx.y + blockIdx.y * blockDim.y;
-
-    auto stride_col = blockDim.x * gridDim.x;
-    auto stride_row = blockDim.y * gridDim.y;
-
-    for (; col < n_col; col += stride_col) {
-        for (; row < n_row; row += stride_row) {
-            auto i = row * n_col + col;
-            Z[i]   = c * pow(X[i], a) * pow(Y[i], b);
-        }
-    }
-}
-
 template <typename T, unsigned tile_dim = 32, unsigned block_rows = 8>
 __global__ void transpose(T* XT, const T* X, unsigned n_row, unsigned n_col)
 {
