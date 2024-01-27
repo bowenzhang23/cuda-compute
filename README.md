@@ -4,6 +4,15 @@ Matrix and Vector computing library with minimal CUDA.
 
 Example usage in `scripts/run_module.py`
 
+## Install
+
+```bash
+# release build
+source setup.sh RELEASE
+# or debug build (with debug print-outs)
+source setup.sh DEBUG
+```
+
 ## Dependency
 
 `GoogleTest`: for unit testing

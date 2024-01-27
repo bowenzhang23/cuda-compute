@@ -17,13 +17,21 @@ class Matrixi(cuda_compute.MatrixiBase):
     pass
 
 
+def max(a, b):
+    return cuda_compute.max(a, b)
+
+
+def min(a, b):
+    return cuda_compute.min(a, b)
+
+
 def device_query():
     cuda_compute.device_query()
 
 
-def sgemm(a, b):
-    return cuda_compute.sgemm(a, b)
+def gemm(a, b):
+    return cuda_compute.gemm(a, b)
 
 
-def igemm(a, b):
-    return cuda_compute.igemm(a, b)
+def inner(a, b):
+    return cuda_compute.inner(a, b)

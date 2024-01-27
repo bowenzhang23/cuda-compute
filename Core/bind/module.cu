@@ -10,81 +10,63 @@ using namespace nb::literals;
 
 using Vectorf = Vector<float>;
 using Vectori = Vector<int>;
-using Vectorb = Vector<bool>;
 
 using Matrixf = Matrix<float>;
 using Matrixi = Matrix<int>;
-using Matrixb = Matrix<bool>;
 
-template <typename T, typename ContType, typename ElemType>
-[[maybe_unused]] T& add_arithmetic(T& nb_class)
+template <typename Tnb, typename Tcd, typename Tcd_int, typename T>
+[[maybe_unused]] Tnb& add_arithmetic(Tnb& cls)
 {
-    return nb_class.def("__pos__", [](const ContType& a) { return a; })
-        .def("__neg__", [](const ContType& a) { return -a; })
-        .def("__pow__",
-             [](const ContType& a, const ElemType b) {
-                 return Power((ElemType) 1, a, b, a, (ElemType) 0);
-             })
-        .def("__add__",
-             [](const ContType& a, const ElemType b) { return a + b; })
-        .def("__radd__",
-             [](const ContType& a, const ElemType b) { return b + a; })
-        .def("__sub__",
-             [](const ContType& a, const ElemType b) { return a - b; })
-        .def("__rsub__",
-             [](const ContType& a, const ElemType b) { return b - a; })
-        .def("__mul__",
-             [](const ContType& a, const ElemType b) { return a * b; })
-        .def("__rmul__",
-             [](const ContType& a, const ElemType b) { return b * a; })
-        .def("__truediv__",
-             [](const ContType& a, const ElemType b) { return a / b; })
-        .def("__rtruediv__",
-             [](const ContType& a, const ElemType b) { return b / a; })
-        .def("__eq__",
-             [](const ContType& a, const ElemType b) { return a == b; })
-        .def("__req__",
-             [](const ContType& a, const ElemType b) { return b == a; })
-        .def("__ne__",
-             [](const ContType& a, const ElemType b) { return a != b; })
-        .def("__rne__",
-             [](const ContType& a, const ElemType b) { return b != a; })
-        .def("__gt__",
-             [](const ContType& a, const ElemType b) { return a > b; })
-        .def("__rgt__",
-             [](const ContType& a, const ElemType b) { return b > a; })
-        .def("__ge__",
-             [](const ContType& a, const ElemType b) { return a >= b; })
-        .def("__rge__",
-             [](const ContType& a, const ElemType b) { return b >= a; })
-        .def("__lt__",
-             [](const ContType& a, const ElemType b) { return a < b; })
-        .def("__rlt__",
-             [](const ContType& a, const ElemType b) { return b < a; })
-        .def("__le__",
-             [](const ContType& a, const ElemType b) { return a <= b; })
-        .def("__rle__",
-             [](const ContType& a, const ElemType b) { return b <= a; })
-        .def("__add__",
-             [](const ContType& a, const ContType& b) { return a + b; })
-        .def("__sub__",
-             [](const ContType& a, const ContType& b) { return a - b; })
-        .def("__mul__",
-             [](const ContType& a, const ContType& b) { return a * b; })
-        .def("__truediv__",
-             [](const ContType& a, const ContType& b) { return a / b; })
-        .def("__eq__",
-             [](const ContType& a, const ContType& b) { return a == b; })
-        .def("__ne__",
-             [](const ContType& a, const ContType& b) { return a != b; })
-        .def("__gt__",
-             [](const ContType& a, const ContType& b) { return a > b; })
-        .def("__ge__",
-             [](const ContType& a, const ContType& b) { return a >= b; })
-        .def("__lt__",
-             [](const ContType& a, const ContType& b) { return a < b; })
-        .def("__le__",
-             [](const ContType& a, const ContType& b) { return a <= b; });
+    cls.def("__pos__", [](const Tcd& a) { return +a; });
+    cls.def("__neg__", [](const Tcd& a) { return -a; });
+    cls.def("__pow__", [](const Tcd& a, const T b) {
+        return Power((T) 1, a, b, a, (T) 0);
+    });
+    cls.def("__add__", [](const Tcd& a, const T b) { return a + b; });
+    cls.def("__radd__", [](const Tcd& a, const T b) { return b + a; });
+    cls.def("__sub__", [](const Tcd& a, const T b) { return a - b; });
+    cls.def("__rsub__", [](const Tcd& a, const T b) { return b - a; });
+    cls.def("__mul__", [](const Tcd& a, const T b) { return a * b; });
+    cls.def("__rmul__", [](const Tcd& a, const T b) { return b * a; });
+    cls.def("__truediv__", [](const Tcd& a, const T b) { return a / b; });
+    cls.def("__rtruediv__", [](const Tcd& a, const T b) { return b / a; });
+    cls.def("__eq__", [](const Tcd& a, const T b) { return a == b; });
+    cls.def("__req__", [](const Tcd& a, const T b) { return b == a; });
+    cls.def("__ne__", [](const Tcd& a, const T b) { return a != b; });
+    cls.def("__rne__", [](const Tcd& a, const T b) { return b != a; });
+    cls.def("__gt__", [](const Tcd& a, const T b) { return a > b; });
+    cls.def("__rgt__", [](const Tcd& a, const T b) { return b > a; });
+    cls.def("__ge__", [](const Tcd& a, const T b) { return a >= b; });
+    cls.def("__rge__", [](const Tcd& a, const T b) { return b >= a; });
+    cls.def("__lt__", [](const Tcd& a, const T b) { return a < b; });
+    cls.def("__rlt__", [](const Tcd& a, const T b) { return b < a; });
+    cls.def("__le__", [](const Tcd& a, const T b) { return a <= b; });
+    cls.def("__rle__", [](const Tcd& a, const T b) { return b <= a; });
+    cls.def("__add__", [](const Tcd& a, const Tcd& b) { return a + b; });
+    cls.def("__sub__", [](const Tcd& a, const Tcd& b) { return a - b; });
+    cls.def("__mul__", [](const Tcd& a, const Tcd& b) { return a * b; });
+    cls.def("__truediv__", [](const Tcd& a, const Tcd& b) { return a / b; });
+    cls.def("__eq__", [](const Tcd& a, const Tcd& b) { return a == b; });
+    cls.def("__ne__", [](const Tcd& a, const Tcd& b) { return a != b; });
+    cls.def("__gt__", [](const Tcd& a, const Tcd& b) { return a > b; });
+    cls.def("__ge__", [](const Tcd& a, const Tcd& b) { return a >= b; });
+    cls.def("__lt__", [](const Tcd& a, const Tcd& b) { return a < b; });
+    cls.def("__le__", [](const Tcd& a, const Tcd& b) { return a <= b; });
+
+    return cls;
+}
+
+template <typename Tnb, typename Tcd, typename T>
+[[maybe_unused]] Tnb& add_binary(Tnb& m)
+{
+    m.def("max", [](const Tcd& a, const T b) { return max(a, b); });
+    m.def("max", [](const T b, const Tcd& a) { return max(b, a); });
+    m.def("max", [](const Tcd& a, const Tcd& b) { return max(a, b); });
+    m.def("min", [](const Tcd& a, const T b) { return min(a, b); });
+    m.def("min", [](const T b, const Tcd& a) { return min(b, a); });
+    m.def("min", [](const Tcd& a, const Tcd& b) { return min(a, b); });
+
+    return m;
 }
 
 NB_MODULE(cuda_compute, m)
@@ -117,13 +99,20 @@ NB_MODULE(cuda_compute, m)
                   .def("shape", &Matrixi::Shape)
                   .def("transpose", &Matrixi::Transpose);
 
-    add_arithmetic<decltype(vf), Vectorf, float>(vf);
-    add_arithmetic<decltype(vi), Vectori, int>(vi);
-    add_arithmetic<decltype(mf), Matrixf, float>(mf);
-    add_arithmetic<decltype(mi), Matrixi, int>(mi);
+    add_arithmetic<decltype(vf), Vectorf, Vectori, float>(vf);
+    add_arithmetic<decltype(vi), Vectori, Vectori, int>(vi);
+    add_arithmetic<decltype(mf), Matrixf, Matrixi, float>(mf);
+    add_arithmetic<decltype(mi), Matrixi, Matrixi, int>(mi);
+
+    add_binary<decltype(m), Vectorf, float>(m);
+    add_binary<decltype(m), Vectori, int>(m);
+    add_binary<decltype(m), Matrixf, float>(m);
+    add_binary<decltype(m), Matrixi, int>(m);
 
     m.def("device_query",
           []() { return DeviceManager::Instance().ToString(); });
-    m.def("sgemm", &MatMul<float>, "a"_a, "b"_a);
-    m.def("igemm", &MatMul<int>, "a"_a, "b"_a);
+    m.def("gemm", &MatMul<float>, "a"_a, "b"_a);
+    m.def("gemm", &MatMul<int>, "a"_a, "b"_a);
+    m.def("inner", &Inner<float>, "a"_a, "b"_a);
+    m.def("inner", &Inner<int>, "a"_a, "b"_a);
 }

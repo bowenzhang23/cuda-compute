@@ -3,12 +3,27 @@
 #include "Error.cuh"
 #include "Timer.cuh"
 #include "cuda_runtime.h"
+#include <concepts>
+#include <numeric>
 #include <vector>
 
 // #define DEBUG_CONSTRUCTOR
 // #define DEBUG_PERFORMANCE
 
 template <typename T>
+concept NumericType = std::floating_point<T> || std::signed_integral<T>;
+
+template <NumericType T>
+class Vector;
+template <NumericType T>
+class Matrix;
+template <NumericType T>
+class CudaData;
+
+template <typename T>
+concept ContInt = requires { std::derived_from<T, CudaData<int>>; };
+
+template <NumericType T>
 class CudaData
 {
 public:
@@ -28,6 +43,10 @@ public:
     inline const T*            Data() const { return m_dmem; }
     inline const cudaStream_t& S() const { return m_stream; }
 
+public:
+    using value_type = T;
+    using int_type   = CudaData<int>;
+
 protected:
     cudaStream_t m_stream;
     size_t       m_size;
@@ -35,7 +54,7 @@ protected:
     T*           m_hmem = nullptr;
 };
 
-template <typename T>
+template <NumericType T>
 inline CudaData<T>::CudaData(size_t size, cudaStream_t stream)
     : m_size(size), m_stream(stream)
 {
@@ -52,7 +71,7 @@ inline CudaData<T>::CudaData(size_t size, cudaStream_t stream)
 #endif
 }
 
-template <typename T>
+template <NumericType T>
 inline CudaData<T>::CudaData(const T* hmem, size_t size, cudaStream_t stream)
     : m_size(size), m_stream(stream)
 {
@@ -71,7 +90,7 @@ inline CudaData<T>::CudaData(const T* hmem, size_t size, cudaStream_t stream)
 #endif
 }
 
-template <typename T>
+template <NumericType T>
 inline CudaData<T>::CudaData(const CudaData& other)
 {
 #ifdef DEBUG_CONSTRUCTOR
@@ -95,7 +114,7 @@ inline CudaData<T>::CudaData(const CudaData& other)
 #endif
 }
 
-template <typename T>
+template <NumericType T>
 inline CudaData<T>::CudaData(CudaData&& other)
 {
 #ifdef DEBUG_CONSTRUCTOR
@@ -116,7 +135,7 @@ inline CudaData<T>::CudaData(CudaData&& other)
 #endif
 }
 
-template <typename T>
+template <NumericType T>
 inline CudaData<T>& CudaData<T>::operator=(const CudaData& other)
 {
 #ifdef DEBUG_CONSTRUCTOR
@@ -128,7 +147,7 @@ inline CudaData<T>& CudaData<T>::operator=(const CudaData& other)
 #ifdef DEBUG_PERFORMANCE
     Timer::Instance().Tick(m_stream);
 #endif
-    m_hmem   = (T*) calloc(1, m_size);
+    m_hmem = (T*) calloc(1, m_size);
     CUDA_CHECK(cudaMallocAsync((void**) &m_dmem, m_size, m_stream));
     memcpy(m_hmem, other.m_hmem, m_size);
     CUDA_CHECK(cudaMemcpyAsync(m_dmem, other.m_dmem, m_size,
@@ -141,7 +160,7 @@ inline CudaData<T>& CudaData<T>::operator=(const CudaData& other)
     return *this;
 }
 
-template <typename T>
+template <NumericType T>
 inline CudaData<T>& CudaData<T>::operator=(CudaData&& other)
 {
 #ifdef DEBUG_CONSTRUCTOR
@@ -163,7 +182,7 @@ inline CudaData<T>& CudaData<T>::operator=(CudaData&& other)
     return *this;
 }
 
-template <typename T>
+template <NumericType T>
 inline CudaData<T>::~CudaData()
 {
     free(m_hmem);
@@ -171,7 +190,7 @@ inline CudaData<T>::~CudaData()
     CUDA_CHECK(cudaStreamSynchronize(m_stream));
 }
 
-template <typename T>
+template <NumericType T>
 inline std::vector<T> CudaData<T>::ToCPU() const
 {
 #ifdef DEBUG_PERFORMANCE
@@ -188,4 +207,282 @@ inline std::vector<T> CudaData<T>::ToCPU() const
     Timer::Instance().Tick(m_stream);
     Timer::Instance().ShowElapsedTime("To CPU");
 #endif
+}
+
+template <NumericType T>
+inline bool HasSameShape(const Vector<T>& x, const Vector<T>& y)
+{
+    if (x.Shape() == y.Shape()) return true;
+
+    fprintf(stdout,
+            "Shape of x [%lu] is not compatible with y [%lu]"
+            ", will return empty\n",
+            x.Shape()[0], y.Shape()[0]);
+    return false;
+}
+
+template <NumericType T>
+inline bool HasSameShape(const Matrix<T>& x, const Matrix<T>& y)
+{
+    if (x.Shape() == y.Shape()) return true;
+
+    fprintf(stdout,
+            "Shape of x [%lu %lu] is not compatible with y [%lu %lu]"
+            ", will return empty\n",
+            x.Shape()[0], x.Shape()[1], y.Shape()[0], y.Shape()[1]);
+    return false;
+}
+
+template <NumericType T>
+inline bool IsValidForGemm(const Matrix<T>& x, const Matrix<T>& y)
+{
+    if (x.Ncol() == y.Nrow()) return true;
+
+    fprintf(stdout,
+            "Shape of x [%lu %lu] is not compatible with y [%lu %lu]"
+            ", will return empty\n",
+            x.Shape()[0], x.Shape()[1], y.Shape()[0], y.Shape()[1]);
+    return false;
+}
+
+template <typename Tcd>
+inline Tcd operator+(const Tcd& x)
+{
+    using T = typename Tcd::value_type;
+    return Linear((T) 1, x, (T) 0, x, (T) 0);
+}
+
+template <typename Tcd>
+inline Tcd operator-(const Tcd& x)
+{
+    using T = typename Tcd::value_type;
+    return Linear((T) -1, x, (T) 0, x, (T) 0);
+}
+
+template <NumericType T, typename Tcd>
+inline Tcd operator+(T a, const Tcd& x)
+{
+    return Linear((T) 1, x, (T) 0, x, (T) a);
+}
+
+template <NumericType T, typename Tcd>
+inline Tcd operator+(const Tcd& x, T a)
+{
+    return Linear((T) 1, x, (T) 0, x, (T) a);
+}
+
+template <NumericType T, typename Tcd>
+inline Tcd operator-(T a, const Tcd& x)
+{
+    return Linear((T) -1, x, (T) 0, x, (T) a);
+}
+
+template <NumericType T, typename Tcd>
+inline Tcd operator-(const Tcd& x, T a)
+{
+    return Linear((T) 1, x, (T) 0, x, (T) -a);
+}
+
+template <NumericType T, typename Tcd>
+inline Tcd operator*(T a, const Tcd& x)
+{
+    return Linear((T) a, x, (T) 0, x, (T) 0);
+}
+
+template <NumericType T, typename Tcd>
+inline Tcd operator*(const Tcd& x, T a)
+{
+    return Linear((T) a, x, (T) 0, x, (T) 0);
+}
+
+template <NumericType T, typename Tcd>
+inline Tcd operator/(T a, const Tcd& x)
+{
+    return Power((T) a, x, (T) -1, x, (T) 0);
+}
+
+template <NumericType T, typename Tcd>
+inline Tcd operator/(const Tcd& x, T a)
+{
+    return Linear((T) 1 / (T) a, x, (T) 0, x, (T) 0);
+}
+
+template <NumericType T, typename Tcd>
+inline typename Tcd::int_type operator==(const Tcd& x, T a)
+{
+    return Binary<int, T>(x, a, BinaryOp::EQ);
+}
+
+template <NumericType T, typename Tcd>
+inline typename Tcd::int_type operator==(T a, const Tcd& x)
+{
+    return x == a;
+}
+
+template <NumericType T, typename Tcd>
+inline typename Tcd::int_type operator!=(const Tcd& x, T a)
+{
+    return Binary<int, T>(x, a, BinaryOp::NE);
+}
+
+template <NumericType T, typename Tcd>
+inline typename Tcd::int_type operator!=(T a, const Tcd& x)
+{
+    return x != a;
+}
+
+template <NumericType T, typename Tcd>
+inline typename Tcd::int_type operator<(const Tcd& x, T a)
+{
+    return Binary<int, T>(x, a, BinaryOp::LT);
+}
+
+template <NumericType T, typename Tcd>
+inline typename Tcd::int_type operator<(T a, const Tcd& x)
+{
+    return x > a;
+}
+
+template <NumericType T, typename Tcd>
+inline typename Tcd::int_type operator<=(const Tcd& x, T a)
+{
+    return Binary<int, T>(x, a, BinaryOp::LE);
+}
+
+template <NumericType T, typename Tcd>
+inline typename Tcd::int_type operator<=(T a, const Tcd& x)
+{
+    return x >= a;
+}
+
+template <NumericType T, typename Tcd>
+inline typename Tcd::int_type operator>(const Tcd& x, T a)
+{
+    return Binary<int, T>(x, a, BinaryOp::GT);
+}
+
+template <NumericType T, typename Tcd>
+inline typename Tcd::int_type operator>(T a, const Tcd& x)
+{
+    return x < a;
+}
+
+template <NumericType T, typename Tcd>
+inline typename Tcd::int_type operator>=(const Tcd& x, T a)
+{
+    return Binary<int, T>(x, a, BinaryOp::GE);
+}
+
+template <NumericType T, typename Tcd>
+inline typename Tcd::int_type operator>=(T a, const Tcd& x)
+{
+    return x <= a;
+}
+
+template <NumericType T, typename Tcd>
+inline Tcd max(const Tcd& x, T a)
+{
+    return Binary<T, T>(x, a, BinaryOp::MAX);
+}
+
+template <NumericType T, typename Tcd>
+inline Tcd max(T a, const Tcd& x)
+{
+    return max(x, a);
+}
+
+template <NumericType T, typename Tcd>
+inline Tcd min(const Tcd& x, T a)
+{
+    return Binary<T, T>(x, a, BinaryOp::MIN);
+}
+
+template <NumericType T, typename Tcd>
+inline Tcd min(T a, const Tcd& x)
+{
+    return min(x, a);
+}
+
+template <typename Tcd>
+inline Tcd operator+(const Tcd& x, const Tcd& y)
+{
+    using T = typename Tcd::value_type;
+    return Linear((T) 1, x, (T) 1, y, (T) 0);
+}
+
+template <typename Tcd>
+inline Tcd operator-(const Tcd& x, const Tcd& y)
+{
+    using T = typename Tcd::value_type;
+    return Linear((T) 1, x, (T) -1, y, (T) 0);
+}
+
+template <typename Tcd>
+inline Tcd operator*(const Tcd& x, const Tcd& y)
+{
+    using T = typename Tcd::value_type;
+    return Power((T) 1, x, (T) 1, y, (T) 1);
+}
+
+template <typename Tcd>
+inline Tcd operator/(const Tcd& x, const Tcd& y)
+{
+    using T = typename Tcd::value_type;
+    return Power((T) 1, x, (T) 1, y, (T) -1);
+}
+
+template <typename Tcd>
+inline typename Tcd::int_type operator==(const Tcd& x, const Tcd& y)
+{
+    using T = typename Tcd::value_type;
+    return Binary<int, T>(x, y, BinaryOp::EQ);
+}
+
+template <typename Tcd>
+inline typename Tcd::int_type operator!=(const Tcd& x, const Tcd& y)
+{
+    using T = typename Tcd::value_type;
+    return Binary<int, T>(x, y, BinaryOp::NE);
+}
+
+template <typename Tcd>
+inline typename Tcd::int_type operator<(const Tcd& x, const Tcd& y)
+{
+    using T = typename Tcd::value_type;
+    return Binary<int, T>(x, y, BinaryOp::LT);
+}
+
+template <typename Tcd>
+inline typename Tcd::int_type operator<=(const Tcd& x, const Tcd& y)
+{
+    using T = typename Tcd::value_type;
+    return Binary<int, T>(x, y, BinaryOp::LE);
+}
+
+template <typename Tcd>
+inline typename Tcd::int_type operator>(const Tcd& x, const Tcd& y)
+{
+    using T = typename Tcd::value_type;
+    return Binary<int, T>(x, y, BinaryOp::GT);
+}
+
+template <typename Tcd>
+inline typename Tcd::int_type operator>=(const Tcd& x, const Tcd& y)
+{
+    using T = typename Tcd::value_type;
+    return Binary<int, T>(x, y, BinaryOp::GE);
+}
+
+template <typename Tcd>
+inline Tcd max(const Tcd& x, const Tcd& y)
+{
+    using T = typename Tcd::value_type;
+    return Binary<T, T>(x, y, BinaryOp::MAX);
+}
+
+template <typename Tcd>
+inline Tcd min(const Tcd& x, const Tcd& y)
+{
+    using T = typename Tcd::value_type;
+    return Binary<T, T>(x, y, BinaryOp::MIN);
 }

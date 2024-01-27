@@ -7,55 +7,55 @@ enum class BinaryOp { EQ, NE, GT, GE, LT, LE, MIN, MAX };
 namespace CommonOp
 {
 template <typename T>
-__device__ int eq(const T& lhs, const T& rhs)
+__forceinline__ __device__ int eq(const T& lhs, const T& rhs)
 {
     return lhs == rhs;
 }
 
 template <typename T>
-__device__ int ne(const T& lhs, const T& rhs)
+__forceinline__ __device__ int ne(const T& lhs, const T& rhs)
 {
     return lhs != rhs;
 }
 
 template <typename T>
-__device__ int gt(const T& lhs, const T& rhs)
+__forceinline__ __device__ int gt(const T& lhs, const T& rhs)
 {
     return lhs > rhs;
 }
 
 template <typename T>
-__device__ int ge(const T& lhs, const T& rhs)
+__forceinline__ __device__ int ge(const T& lhs, const T& rhs)
 {
     return lhs >= rhs;
 }
 
 template <typename T>
-__device__ int lt(const T& lhs, const T& rhs)
+__forceinline__ __device__ int lt(const T& lhs, const T& rhs)
 {
     return lhs < rhs;
 }
 
 template <typename T>
-__device__ int le(const T& lhs, const T& rhs)
+__forceinline__ __device__ int le(const T& lhs, const T& rhs)
 {
     return lhs <= rhs;
 }
 
 template <typename T>
-__device__ T min(const T& lhs, const T& rhs)
+__forceinline__ __device__ T min(const T& lhs, const T& rhs)
 {
     return lhs < rhs ? lhs : rhs;
 }
 
 template <typename T>
-__device__ T max(const T& lhs, const T& rhs)
+__forceinline__ __device__ T max(const T& lhs, const T& rhs)
 {
     return lhs > rhs ? lhs : rhs;
 }
 
 template <typename T>
-__device__ T binary_op(BinaryOp op, const T& lhs, const T& rhs)
+__forceinline__ __device__ T binary_op(BinaryOp op, const T& lhs, const T& rhs)
 {
     switch (op) {
         case BinaryOp::EQ: return eq(lhs, rhs);

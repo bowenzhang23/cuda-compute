@@ -105,7 +105,8 @@ TEST(Vector, Binary)
     constexpr std::size_t len = 4001;
     std::vector<int>      x(len);
     std::vector<int>      y(len);
-    std::generate(x.begin(), x.end(), [i = 0]() mutable { return 1 - (i++) % 2; });
+    std::generate(x.begin(), x.end(),
+                  [i = 0]() mutable { return 1 - (i++) % 2; });
     std::generate(y.begin(), y.end(), [i = 0]() mutable { return (i++) % 2; });
     Vector<int> vx(x.data(), len);
     Vector<int> vy(y.data(), len);
@@ -136,6 +137,19 @@ TEST(Vector, ScaleSelf)
     auto px = vx.ToCPU();
     EXPECT_TRUE(std::all_of(px.begin(), px.end(),
                             [i = 0](int j) mutable { return j == 2 * (i++); }));
+}
+
+TEST(Vector, Inner)
+{
+    constexpr std::size_t len = 255 + 4096;
+    std::vector<int>      x(len);
+    std::vector<int>      y(len);
+    std::generate(x.begin(), x.end(), []() { return 1; });
+    std::generate(y.begin(), y.end(), []() { return 1; });
+    Vector<int> vx(x.data(), len);
+    Vector<int> vy(y.data(), len);
+    int         result = Inner(vx, vy);
+    EXPECT_EQ(result, len);
 }
 
 int main(int argc, char** argv)

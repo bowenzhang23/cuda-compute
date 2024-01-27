@@ -5,7 +5,7 @@
 #include "DeviceManager.cuh"
 #include "VectorOp.cuh"
 
-template <typename T>
+template <NumericType T>
 class Vector : public CudaData<T>
 {
 public:
@@ -29,23 +29,27 @@ public:
         return { Nlen() };
     }
 
+public:
+    using value_type = T;
+    using int_type   = Vector<int>;
+
 private:
     size_t m_len;
 };
 
-template <typename T>
+template <NumericType T>
 inline Vector<T>::Vector(size_t len, cudaStream_t stream)
     : m_len(len), CudaData<T>(sizeof(T) * len, stream)
 {
 }
 
-template <typename T>
+template <NumericType T>
 inline Vector<T>::Vector(const T* hmem, size_t len, cudaStream_t stream)
     : m_len(len), CudaData<T>(hmem, sizeof(T) * len, stream)
 {
 }
 
-template <typename T>
+template <NumericType T>
 inline Vector<T>::Vector(const std::vector<T>& hmem, size_t len,
                          cudaStream_t stream)
     : m_len(len), CudaData<T>(hmem.data(), sizeof(T) * len, stream)
@@ -58,7 +62,7 @@ inline Vector<T>::Vector(const std::vector<T>& hmem, size_t len,
     }
 }
 
-template <typename T>
+template <NumericType T>
 inline Vector<T>::Vector(const Vector& other)
     : CudaData<T>(other), m_len(other.m_len)
 {
@@ -67,7 +71,7 @@ inline Vector<T>::Vector(const Vector& other)
 #endif
 }
 
-template <typename T>
+template <NumericType T>
 inline Vector<T>::Vector(Vector&& other)
     : CudaData<T>(std::move(other)), m_len(other.m_len)
 {
@@ -76,7 +80,7 @@ inline Vector<T>::Vector(Vector&& other)
 #endif
 }
 
-template <typename T>
+template <NumericType T>
 inline Vector<T>& Vector<T>::operator=(const Vector& other)
 {
 #ifdef DEBUG_CONSTRUCTOR
@@ -87,7 +91,7 @@ inline Vector<T>& Vector<T>::operator=(const Vector& other)
     return *this;
 }
 
-template <typename T>
+template <NumericType T>
 inline Vector<T>& Vector<T>::operator=(Vector&& other)
 {
 #ifdef DEBUG_CONSTRUCTOR
@@ -98,7 +102,7 @@ inline Vector<T>& Vector<T>::operator=(Vector&& other)
     return *this;
 }
 
-template <typename T>
+template <NumericType T>
 inline Vector<T> Linear(T a, const Vector<T>& x, T b, const Vector<T>& y, T c)
 {
     cudaStream_t s   = x.S();
@@ -109,13 +113,7 @@ inline Vector<T> Linear(T a, const Vector<T>& x, T b, const Vector<T>& y, T c)
         s = 0;
     }
     Vector<T> z(len, s);
-    if (x.Shape() != y.Shape()) {
-        fprintf(stdout,
-                "Shape of x [%lu] is not compatible with that of y [%lu]"
-                ", will return empty matrix\n",
-                x.Shape()[0], y.Shape()[0]);
-        return z;
-    }
+    if (!HasSameShape(x, y)) { return z; }
 
     unsigned nb = DeviceManager::Curr().Prop().multiProcessorCount * 4;
     unsigned nt = 256;
@@ -136,7 +134,7 @@ inline Vector<T> Linear(T a, const Vector<T>& x, T b, const Vector<T>& y, T c)
     return z;
 }
 
-template <typename T>
+template <NumericType T>
 inline Vector<T> Power(T c, const Vector<T>& x, T a, const Vector<T>& y, T b)
 {
     cudaStream_t s   = x.S();
@@ -147,13 +145,7 @@ inline Vector<T> Power(T c, const Vector<T>& x, T a, const Vector<T>& y, T b)
         s = 0;
     }
     Vector<T> z(len, s);
-    if (x.Shape() != y.Shape()) {
-        fprintf(stdout,
-                "Shape of x [%lu] is not compatible with that of y [%lu]"
-                ", will return empty matrix\n",
-                x.Shape()[0], y.Shape()[0]);
-        return z;
-    }
+    if (!HasSameShape(x, y)) { return z; }
 
     unsigned nb = DeviceManager::Curr().Prop().multiProcessorCount * 4;
     unsigned nt = 256;
@@ -174,7 +166,7 @@ inline Vector<T> Power(T c, const Vector<T>& x, T a, const Vector<T>& y, T b)
     return z;
 }
 
-template <typename T1, typename T2>
+template <NumericType T1, NumericType T2>
 inline Vector<T1> Binary(const Vector<T2>& x, const Vector<T2>& y, BinaryOp op)
 {
     cudaStream_t s   = x.S();
@@ -185,13 +177,7 @@ inline Vector<T1> Binary(const Vector<T2>& x, const Vector<T2>& y, BinaryOp op)
         s = 0;
     }
     Vector<T1> z(len, s);
-    if (x.Shape() != y.Shape()) {
-        fprintf(stdout,
-                "Shape of x [%lu] is not compatible with that of y [%lu]"
-                ", will return empty matrix\n",
-                x.Shape()[0], y.Shape()[0]);
-        return z;
-    }
+    if (!HasSameShape(x, y)) { return z; }
 
     unsigned nb = DeviceManager::Curr().Prop().multiProcessorCount * 4;
     unsigned nt = 256;
@@ -200,10 +186,10 @@ inline Vector<T1> Binary(const Vector<T2>& x, const Vector<T2>& y, BinaryOp op)
     Timer::Instance().Tick(s);
 #endif
     CommonOp::binary<T1, T2>
-        <<<nb, nt, 0, s>>>(z.Data(), x.Data(), y.Data(), op, x.Nlen());
+        <<<nb, nt, 0, s>>>(z.Data(), x.Data(), y.Data(), op, len);
 #ifdef DEBUG_PERFORMANCE
     Timer::Instance().Tick(s);
-    Timer::Instance().ShowElapsedTime("Vector Power");
+    Timer::Instance().ShowElapsedTime("Vector Binary");
 #endif
 
     CUDA_CHECK_LAST();
@@ -212,7 +198,7 @@ inline Vector<T1> Binary(const Vector<T2>& x, const Vector<T2>& y, BinaryOp op)
     return z;
 }
 
-template <typename T1, typename T2>
+template <NumericType T1, NumericType T2>
 inline Vector<T1> Binary(const Vector<T2>& x, T2 y, BinaryOp op)
 {
     cudaStream_t s = x.S();
@@ -237,194 +223,34 @@ inline Vector<T1> Binary(const Vector<T2>& x, T2 y, BinaryOp op)
     return z;
 }
 
-template <typename T>
-inline Vector<T> operator+(const Vector<T>& x)
+template <NumericType T>
+inline T Inner(const Vector<T>& x, const Vector<T>& y)
 {
-    return Linear((T) 1, x, (T) 0, x, (T) 0);
-}
+    cudaStream_t s   = x.S();
+    auto         len = std::min(x.Nlen(), y.Nlen());
 
-template <typename T>
-inline Vector<T> operator-(const Vector<T>& x)
-{
-    return Linear((T) -1, x, (T) 0, x, (T) 0);
-}
+    if (x.S() != y.S()) {
+        CUDA_CHECK(cudaDeviceSynchronize());
+        s = 0;
+    }
 
-template <typename T>
-inline Vector<T> operator+(T a, const Vector<T>& x)
-{
-    return Linear((T) 1, x, (T) 0, x, (T) a);
-}
+    if (!HasSameShape(x, y)) { return 0; }
 
-template <typename T>
-inline Vector<T> operator+(const Vector<T>& x, T a)
-{
-    return Linear((T) 1, x, (T) 0, x, (T) a);
-}
+    constexpr unsigned nt = 256;
+    unsigned           nb = (len + 2 * nt - 1) / (2 * nt);
+    Vector<T>          z(nb, s);
 
-template <typename T>
-inline Vector<T> operator-(T a, const Vector<T>& x)
-{
-    return Linear((T) -1, x, (T) 0, x, (T) a);
-}
+#ifdef DEBUG_PERFORMANCE
+    Timer::Instance().Tick(s);
+#endif
+    VectorOp::inner<T, nt><<<nb, nt, 0, s>>>(z.Data(), x.Data(), y.Data(), len);
+#ifdef DEBUG_PERFORMANCE
+    Timer::Instance().Tick(s);
+    Timer::Instance().ShowElapsedTime("Vector Inner Product");
+#endif
+    auto inner_blocks = z.ToCPU();
+    CUDA_CHECK_LAST();
+    CUDA_CHECK(cudaStreamSynchronize(s));
 
-template <typename T>
-inline Vector<T> operator-(const Vector<T>& x, T a)
-{
-    return Linear((T) 1, x, (T) 0, x, (T) -a);
-}
-
-template <typename T>
-inline Vector<T> operator*(T a, const Vector<T>& x)
-{
-    return Linear((T) a, x, (T) 0, x, (T) 0);
-}
-
-template <typename T>
-inline Vector<T> operator*(const Vector<T>& x, T a)
-{
-    return Linear((T) a, x, (T) 0, x, (T) 0);
-}
-
-template <typename T>
-inline Vector<T> operator/(T a, const Vector<T>& x)
-{
-    return Power((T) a, x, (T) -1, x, (T) 0);
-}
-
-template <typename T>
-inline Vector<T> operator/(const Vector<T>& x, T a)
-{
-    return Linear((T) 1 / (T) a, x, (T) 0, x, (T) 0);
-}
-
-template <typename T>
-inline Vector<int> operator==(const Vector<T>& x, T a)
-{
-    return Binary<int, T>(x, a, BinaryOp::EQ);
-}
-
-template <typename T>
-inline Vector<int> operator==(T a, const Vector<T>& x)
-{
-    return x == a;
-}
-
-template <typename T>
-inline Vector<int> operator!=(const Vector<T>& x, T a)
-{
-    return Binary<int, T>(x, a, BinaryOp::NE);
-}
-
-template <typename T>
-inline Vector<int> operator!=(T a, const Vector<T>& x)
-{
-    return x != a;
-}
-
-template <typename T>
-inline Vector<int> operator<(const Vector<T>& x, T a)
-{
-    return Binary<int, T>(x, a, BinaryOp::LT);
-}
-
-template <typename T>
-inline Vector<int> operator<(T a, const Vector<T>& x)
-{
-    return x > a;
-}
-
-template <typename T>
-inline Vector<int> operator<=(const Vector<T>& x, T a)
-{
-    return Binary<int, T>(x, a, BinaryOp::LE);
-}
-
-template <typename T>
-inline Vector<int> operator<=(T a, const Vector<T>& x)
-{
-    return x >= a;
-}
-
-template <typename T>
-inline Vector<int> operator>(const Vector<T>& x, T a)
-{
-    return Binary<int, T>(x, a, BinaryOp::GT);
-}
-
-template <typename T>
-inline Vector<int> operator>(T a, const Vector<T>& x)
-{
-    return x < a;
-}
-
-template <typename T>
-inline Vector<int> operator>=(const Vector<T>& x, T a)
-{
-    return Binary<int, T>(x, a, BinaryOp::GE);
-}
-
-template <typename T>
-inline Vector<int> operator>=(T a, const Vector<T>& x)
-{
-    return x <= a;
-}
-
-template <typename T>
-inline Vector<T> operator+(const Vector<T>& x, const Vector<T>& y)
-{
-    return Linear((T) 1, x, (T) 1, y, (T) 0);
-}
-
-template <typename T>
-inline Vector<T> operator-(const Vector<T>& x, const Vector<T>& y)
-{
-    return Linear((T) 1, x, (T) -1, y, (T) 0);
-}
-
-template <typename T>
-inline Vector<T> operator*(const Vector<T>& x, const Vector<T>& y)
-{
-    return Power((T) 1, x, (T) 1, y, (T) 1);
-}
-
-template <typename T>
-inline Vector<T> operator/(const Vector<T>& x, const Vector<T>& y)
-{
-    return Power((T) 1, x, (T) 1, y, (T) -1);
-}
-
-template <typename T>
-inline Vector<int> operator==(const Vector<T>& x, const Vector<T>& y)
-{
-    return Binary<int, T>(x, y, BinaryOp::EQ);
-}
-
-template <typename T>
-inline Vector<int> operator!=(const Vector<T>& x, const Vector<T>& y)
-{
-    return Binary<int, T>(x, y, BinaryOp::NE);
-}
-
-template <typename T>
-inline Vector<int> operator<(const Vector<T>& x, const Vector<T>& y)
-{
-    return Binary<int, T>(x, y, BinaryOp::LT);
-}
-
-template <typename T>
-inline Vector<int> operator<=(const Vector<T>& x, const Vector<T>& y)
-{
-    return Binary<int, T>(x, y, BinaryOp::LE);
-}
-
-template <typename T>
-inline Vector<int> operator>(const Vector<T>& x, const Vector<T>& y)
-{
-    return Binary<int, T>(x, y, BinaryOp::GT);
-}
-
-template <typename T>
-inline Vector<int> operator>=(const Vector<T>& x, const Vector<T>& y)
-{
-    return Binary<int, T>(x, y, BinaryOp::GE);
+    return std::accumulate(inner_blocks.begin(), inner_blocks.end(), (T) 0);
 }

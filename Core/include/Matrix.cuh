@@ -5,7 +5,7 @@
 #include "DeviceManager.cuh"
 #include "MatrixOp.cuh"
 
-template <typename T>
+template <NumericType T>
 class Matrix : public CudaData<T>
 {
 public:
@@ -32,6 +32,10 @@ public:
     }
 
 public:
+    using value_type = T;
+    using int_type = Matrix<int>;
+
+public:
     Matrix Transpose() const;
 
 private:
@@ -39,13 +43,13 @@ private:
     size_t m_ncol;
 };
 
-template <typename T>
+template <NumericType T>
 inline Matrix<T>::Matrix(size_t nrow, size_t ncol, cudaStream_t stream)
     : m_nrow(nrow), m_ncol(ncol), CudaData<T>(sizeof(T) * nrow * ncol, stream)
 {
 }
 
-template <typename T>
+template <NumericType T>
 inline Matrix<T>::Matrix(const T* hmem, size_t nrow, size_t ncol,
                          cudaStream_t stream)
     : m_nrow(nrow)
@@ -54,7 +58,7 @@ inline Matrix<T>::Matrix(const T* hmem, size_t nrow, size_t ncol,
 {
 }
 
-template <typename T>
+template <NumericType T>
 inline Matrix<T>::Matrix(const std::vector<T>& hmem, size_t nrow, size_t ncol,
                          cudaStream_t stream)
     : m_nrow(nrow)
@@ -69,7 +73,7 @@ inline Matrix<T>::Matrix(const std::vector<T>& hmem, size_t nrow, size_t ncol,
     }
 }
 
-template <typename T>
+template <NumericType T>
 inline Matrix<T>::Matrix(const Matrix& other)
     : CudaData<T>(other), m_nrow(other.m_nrow), m_ncol(other.m_ncol)
 {
@@ -78,7 +82,7 @@ inline Matrix<T>::Matrix(const Matrix& other)
 #endif
 }
 
-template <typename T>
+template <NumericType T>
 inline Matrix<T>::Matrix(Matrix&& other)
     : CudaData<T>(std::move(other)), m_nrow(other.m_nrow), m_ncol(other.m_ncol)
 {
@@ -87,7 +91,7 @@ inline Matrix<T>::Matrix(Matrix&& other)
 #endif
 }
 
-template <typename T>
+template <NumericType T>
 inline Matrix<T>& Matrix<T>::operator=(const Matrix& other)
 {
 #ifdef DEBUG_CONSTRUCTOR
@@ -99,7 +103,7 @@ inline Matrix<T>& Matrix<T>::operator=(const Matrix& other)
     return *this;
 }
 
-template <typename T>
+template <NumericType T>
 inline Matrix<T>& Matrix<T>::operator=(Matrix&& other)
 {
 #ifdef DEBUG_CONSTRUCTOR
@@ -111,7 +115,7 @@ inline Matrix<T>& Matrix<T>::operator=(Matrix&& other)
     return *this;
 }
 
-template <typename T>
+template <NumericType T>
 inline Matrix<T> Matrix<T>::Transpose() const
 {
     Matrix<T> xt(Ncol(), Nrow(), this->S());
@@ -138,7 +142,7 @@ inline Matrix<T> Matrix<T>::Transpose() const
     return xt;
 }
 
-template <typename T>
+template <NumericType T>
 inline Matrix<T> Linear(T a, const Matrix<T>& x, T b, const Matrix<T>& y, T c)
 {
     cudaStream_t s     = x.S();
@@ -151,14 +155,7 @@ inline Matrix<T> Linear(T a, const Matrix<T>& x, T b, const Matrix<T>& y, T c)
     }
 
     Matrix<T> z(n_row, n_col, s);
-    if (x.Shape() != y.Shape()) {
-        fprintf(
-            stdout,
-            "Shape of x [%lu %lu] is not compatible with that of y [%lu %lu]"
-            ", will return empty matrix\n",
-            x.Shape()[0], x.Shape()[1], y.Shape()[0], y.Shape()[1]);
-        return z;
-    }
+    if (!HasSameShape(x, y)) { return z; }
 
     unsigned nb = DeviceManager::Curr().Prop().multiProcessorCount * 4;
     unsigned nt = 256;
@@ -179,7 +176,7 @@ inline Matrix<T> Linear(T a, const Matrix<T>& x, T b, const Matrix<T>& y, T c)
     return z;
 }
 
-template <typename T>
+template <NumericType T>
 inline Matrix<T> Power(T c, const Matrix<T>& x, T a, const Matrix<T>& y, T b)
 {
     cudaStream_t s     = x.S();
@@ -192,14 +189,7 @@ inline Matrix<T> Power(T c, const Matrix<T>& x, T a, const Matrix<T>& y, T b)
     }
 
     Matrix<T> z(n_row, n_col, s);
-    if (x.Shape() != y.Shape()) {
-        fprintf(
-            stdout,
-            "Shape of x [%lu %lu] is not compatible with that of y [%lu %lu]"
-            ", will return empty matrix\n",
-            x.Shape()[0], x.Shape()[1], y.Shape()[0], y.Shape()[1]);
-        return z;
-    }
+    if (!HasSameShape(x, y)) { return z; }
 
     unsigned nb = DeviceManager::Curr().Prop().multiProcessorCount * 4;
     unsigned nt = 256;
@@ -220,7 +210,7 @@ inline Matrix<T> Power(T c, const Matrix<T>& x, T a, const Matrix<T>& y, T b)
     return z;
 }
 
-template <typename T1, typename T2, typename BinaryFunc>
+template <NumericType T1, NumericType T2, typename BinaryFunc>
 inline Matrix<T1> Binary(const Matrix<T2>& x, const Matrix<T2>& y,
                          BinaryFunc func)
 {
@@ -234,14 +224,7 @@ inline Matrix<T1> Binary(const Matrix<T2>& x, const Matrix<T2>& y,
     }
 
     Matrix<T1> z(n_row, n_col, s);
-    if (x.Shape() != y.Shape()) {
-        fprintf(
-            stdout,
-            "Shape of x [%lu %lu] is not compatible with that of y [%lu %lu]"
-            ", will return empty matrix\n",
-            x.Shape()[0], x.Shape()[1], y.Shape()[0], y.Shape()[1]);
-        return z;
-    }
+    if (!HasSameShape(x, y)) { return z; }
 
     unsigned nb = DeviceManager::Curr().Prop().multiProcessorCount * 4;
     unsigned nt = 256;
@@ -262,7 +245,7 @@ inline Matrix<T1> Binary(const Matrix<T2>& x, const Matrix<T2>& y,
     return z;
 }
 
-template <typename T1, typename T2, typename BinaryFunc>
+template <NumericType T1, NumericType T2, typename BinaryFunc>
 inline Matrix<T1> Binary(const Matrix<T2>& x, T2 y, BinaryFunc func)
 {
     cudaStream_t s = x.S();
@@ -278,7 +261,7 @@ inline Matrix<T1> Binary(const Matrix<T2>& x, T2 y, BinaryFunc func)
         <<<nb, nt, 0, s>>>(z.Data(), x.Data(), y, func, x.Nrow() * x.Ncol());
 #ifdef DEBUG_PERFORMANCE
     Timer::Instance().Tick(s);
-    Timer::Instance().ShowElapsedTime("Matrix Power");
+    Timer::Instance().ShowElapsedTime("Matrix Binary");
 #endif
 
     CUDA_CHECK_LAST();
@@ -287,199 +270,7 @@ inline Matrix<T1> Binary(const Matrix<T2>& x, T2 y, BinaryFunc func)
     return z;
 }
 
-template <typename T>
-inline Matrix<T> operator+(const Matrix<T>& x)
-{
-    return Linear((T) 1, x, (T) 0, x, (T) 0);
-}
-
-template <typename T>
-inline Matrix<T> operator-(const Matrix<T>& x)
-{
-    return Linear((T) -1, x, (T) 0, x, (T) 0);
-}
-
-template <typename T>
-inline Matrix<T> operator+(T a, const Matrix<T>& x)
-{
-    return Linear((T) 1, x, (T) 0, x, (T) a);
-}
-
-template <typename T>
-inline Matrix<T> operator+(const Matrix<T>& x, T a)
-{
-    return Linear((T) 1, x, (T) 0, x, (T) a);
-}
-
-template <typename T>
-inline Matrix<T> operator-(T a, const Matrix<T>& x)
-{
-    return Linear((T) -1, x, (T) 0, x, (T) a);
-}
-
-template <typename T>
-inline Matrix<T> operator-(const Matrix<T>& x, T a)
-{
-    return Linear((T) 1, x, (T) 0, x, (T) -a);
-}
-
-template <typename T>
-inline Matrix<T> operator*(T a, const Matrix<T>& x)
-{
-    return Linear((T) a, x, (T) 0, x, (T) 0);
-}
-
-template <typename T>
-inline Matrix<T> operator*(const Matrix<T>& x, T a)
-{
-    return Linear((T) a, x, (T) 0, x, (T) 0);
-}
-
-template <typename T>
-inline Matrix<T> operator/(T a, const Matrix<T>& x)
-{
-    return Power((T) a, x, (T) -1, x, (T) 0);
-}
-
-template <typename T>
-inline Matrix<T> operator/(const Matrix<T>& x, T a)
-{
-    return Linear((T) 1 / (T) a, x, (T) 0, x, (T) 0);
-}
-
-template <typename T>
-inline Matrix<int> operator==(const Matrix<T>& x, T a)
-{
-    return Binary<int, T>(x, a, BinaryOp::EQ);
-}
-
-template <typename T>
-inline Matrix<int> operator==(T a, const Matrix<T>& x)
-{
-    return x == a;
-}
-
-template <typename T>
-inline Matrix<int> operator!=(const Matrix<T>& x, T a)
-{
-    return Binary<int, T>(x, a, BinaryOp::NE);
-}
-
-template <typename T>
-inline Matrix<int> operator!=(T a, const Matrix<T>& x)
-{
-    return x != a;
-}
-
-template <typename T>
-inline Matrix<int> operator<(const Matrix<T>& x, T a)
-{
-    return Binary<int, T>(x, a, BinaryOp::LT);
-}
-
-template <typename T>
-inline Matrix<int> operator<(T a, const Matrix<T>& x)
-{
-    return x > a;
-}
-
-template <typename T>
-inline Matrix<int> operator<=(const Matrix<T>& x, T a)
-{
-    return Binary<int, T>(x, a, BinaryOp::LE);
-}
-
-template <typename T>
-inline Matrix<int> operator<=(T a, const Matrix<T>& x)
-{
-    return x >= a;
-}
-
-template <typename T>
-inline Matrix<int> operator>(const Matrix<T>& x, T a)
-{
-    return Binary<int, T>(x, a, BinaryOp::GT);
-}
-
-template <typename T>
-inline Matrix<int> operator>(T a, const Matrix<T>& x)
-{
-    return x < a;
-}
-
-template <typename T>
-inline Matrix<int> operator>=(const Matrix<T>& x, T a)
-{
-    return Binary<int, T>(x, a, BinaryOp::GE);
-}
-
-template <typename T>
-inline Matrix<int> operator>=(T a, const Matrix<T>& x)
-{
-    return x <= a;
-}
-
-template <typename T>
-inline Matrix<T> operator+(const Matrix<T>& x, const Matrix<T>& y)
-{
-    return Linear((T) 1, x, (T) 1, y, (T) 0);
-}
-
-template <typename T>
-inline Matrix<T> operator-(const Matrix<T>& x, const Matrix<T>& y)
-{
-    return Linear((T) 1, x, (T) -1, y, (T) 0);
-}
-
-template <typename T>
-inline Matrix<T> operator*(const Matrix<T>& x, const Matrix<T>& y)
-{
-    return Power((T) 1, x, (T) 1, y, (T) 1);
-}
-
-template <typename T>
-inline Matrix<T> operator/(const Matrix<T>& x, const Matrix<T>& y)
-{
-    return Power((T) 1, x, (T) 1, y, (T) -1);
-}
-
-template <typename T>
-inline Matrix<int> operator==(const Matrix<T>& x, const Matrix<T>& y)
-{
-    return Binary<int, T>(x, y, BinaryOp::EQ);
-}
-
-template <typename T>
-inline Matrix<int> operator!=(const Matrix<T>& x, const Matrix<T>& y)
-{
-    return Binary<int, T>(x, y, BinaryOp::NE);
-}
-
-template <typename T>
-inline Matrix<int> operator<(const Matrix<T>& x, const Matrix<T>& y)
-{
-    return Binary<int, T>(x, y, BinaryOp::LT);
-}
-
-template <typename T>
-inline Matrix<int> operator<=(const Matrix<T>& x, const Matrix<T>& y)
-{
-    return Binary<int, T>(x, y, BinaryOp::LE);
-}
-
-template <typename T>
-inline Matrix<int> operator>(const Matrix<T>& x, const Matrix<T>& y)
-{
-    return Binary<int, T>(x, y, BinaryOp::GT);
-}
-
-template <typename T>
-inline Matrix<int> operator>=(const Matrix<T>& x, const Matrix<T>& y)
-{
-    return Binary<int, T>(x, y, BinaryOp::GE);
-}
-
-template <typename T>
+template <NumericType T>
 inline Matrix<T> MatMulSmall(const Matrix<T>& x, const Matrix<T>& y)
 {
     cudaStream_t s = x.S();
@@ -489,14 +280,7 @@ inline Matrix<T> MatMulSmall(const Matrix<T>& x, const Matrix<T>& y)
     }
 
     Matrix<T> z(x.Nrow(), y.Ncol(), s);
-    if (x.Ncol() != y.Nrow()) {
-        fprintf(
-            stdout,
-            "Shape of x [%lu %lu] is not compatible with that of y [%lu %lu]"
-            ", will return empty matrix\n",
-            x.Shape()[0], x.Shape()[1], y.Shape()[0], y.Shape()[1]);
-        return z;
-    }
+    if (!IsValidForGemm(x, y)) { return z; }
 
     unsigned m = (unsigned) x.Nrow();
     unsigned k = (unsigned) x.Ncol();
@@ -522,7 +306,7 @@ inline Matrix<T> MatMulSmall(const Matrix<T>& x, const Matrix<T>& y)
     return z;
 }
 
-template <typename T>
+template <NumericType T>
 inline Matrix<T> MatMulLarge(const Matrix<T>& x, const Matrix<T>& y)
 {
     cudaStream_t s = x.S();
@@ -532,14 +316,7 @@ inline Matrix<T> MatMulLarge(const Matrix<T>& x, const Matrix<T>& y)
     }
 
     Matrix<T> z(x.Nrow(), y.Ncol(), s);
-    if (x.Ncol() != y.Nrow()) {
-        fprintf(
-            stdout,
-            "Shape of x [%lu %lu] is not compatible with that of y [%lu %lu]"
-            ", will return empty matrix\n",
-            x.Shape()[0], x.Shape()[1], y.Shape()[0], y.Shape()[1]);
-        return z;
-    }
+    if (!IsValidForGemm(x, y)) { return z; }
 
     unsigned m = (unsigned) x.Nrow();
     unsigned k = (unsigned) x.Ncol();
@@ -569,7 +346,7 @@ inline Matrix<T> MatMulLarge(const Matrix<T>& x, const Matrix<T>& y)
     return z;
 }
 
-template <typename T>
+template <NumericType T>
 inline Matrix<T> MatMul(const Matrix<T>& x, const Matrix<T>& y)
 {
     unsigned m = (unsigned) x.Nrow();

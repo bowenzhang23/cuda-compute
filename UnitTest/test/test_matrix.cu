@@ -68,7 +68,7 @@ TEST(Vector, Binary)
     std::generate(y.begin(), y.end(), [i = 0]() mutable { return (i++) % 2; });
     Matrix<int> mx(x.data(), row, col);
     Matrix<int> my(y.data(), row, col);
-    Matrix<int> mz = Binary<int, int>(mx, my, BinaryOp::GE);
+    Matrix<int> mz = Binary<int, int>(mx, my, BinaryOp::GT);
     auto        pz = mz.ToCPU();
     EXPECT_EQ(pz, x);
 }
