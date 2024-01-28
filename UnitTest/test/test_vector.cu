@@ -53,6 +53,32 @@ TEST(Vector, MoveConstruct)
     EXPECT_EQ(vf_copy.Shape().at(0), len);
 }
 
+TEST(Vector, SumAndMean)
+{
+    constexpr std::size_t len = 4001;
+    std::vector<int>    x(len);
+    std::generate(x.begin(), x.end(), []() { return 42; });
+    Vector<int> vx(x, len);
+    EXPECT_EQ(vx.Sum(), 4001 * 42);
+    EXPECT_EQ(vx.Mean(), 42);
+}
+
+TEST(Vector, MaxAndMin)
+{
+    constexpr std::size_t len = 4001;
+    std::vector<int>    x(len);
+    std::generate(x.begin(), x.end(), []() { return 0; });
+    x[1001] = 1001;
+    x[2002] = -2002;
+    Vector<int> vx(x, len);
+    ValueIndex<int> max_vi = vx.Max();
+    ValueIndex<int> min_vi = vx.Min();
+    EXPECT_EQ(max_vi.val, 1001);
+    EXPECT_EQ(max_vi.idx, 1001);
+    EXPECT_EQ(min_vi.val, -2002);
+    EXPECT_EQ(min_vi.idx, 2002);
+}
+
 TEST(Vector, Linear)
 {
     constexpr std::size_t len = 4001;

@@ -122,8 +122,8 @@ d = c.transpose()
 end = perf_counter_ns()
 print(f"transpose duration = {(end - start) * 1e-6:.4f} ms")
 
-va = np.arange(1<<20, dtype=np.float32)
-vb = np.arange(1<<20, dtype=np.float32)
+va = np.arange(1 << 20, dtype=np.float32)
+vb = np.arange(1 << 20, dtype=np.float32)
 
 a = va.tolist()
 b = vb.tolist()
@@ -139,6 +139,30 @@ end = perf_counter_ns()
 print(f"inner duration = {(end - start) * 1e-6:.4f} ms")
 
 start = perf_counter_ns()
-c = np.dot(a, b)
+c = np.dot(va, vb)
 end = perf_counter_ns()
 print(f"inner duration = {(end - start) * 1e-6:.4f} ms")
+
+va = np.random.rand(1 << 20)
+a = va.tolist()
+a = c2w.Vectorf(a, len(a))
+
+start = perf_counter_ns()
+val, idx = a.max()
+end = perf_counter_ns()
+print(f"max {val:.6f} {idx} duration = {(end - start) * 1e-6:.4f} ms")
+
+start = perf_counter_ns()
+c = np.max(va)
+end = perf_counter_ns()
+print(f"max {c:.6f} duration = {(end - start) * 1e-6:.4f} ms")
+
+start = perf_counter_ns()
+c = a.mean()
+end = perf_counter_ns()
+print(f"mean {c:.6f} duration = {(end - start) * 1e-6:.4f} ms")
+
+start = perf_counter_ns()
+c = np.mean(va)
+end = perf_counter_ns()
+print(f"mean {c:.6f} duration = {(end - start) * 1e-6:.4f} ms")

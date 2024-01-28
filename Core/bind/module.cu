@@ -2,6 +2,7 @@
 #include "Vector.cuh"
 #include "nanobind/nanobind.h"
 #include "nanobind/stl/array.h"
+#include "nanobind/stl/pair.h"
 #include "nanobind/stl/string.h"
 #include "nanobind/stl/vector.h"
 
@@ -79,13 +80,31 @@ NB_MODULE(cuda_compute, m)
                   .def(nb::init<unsigned long>())
                   .def(nb::init<const std::vector<float>&, unsigned long>())
                   .def("cpu", &Vectorf::ToCPU)
-                  .def("shape", &Vectorf::Shape);
+                  .def("shape", &Vectorf::Shape)
+                  .def("sum", &Vectorf::Sum)
+                  .def("mean", &Vectorf::Mean)
+                  .def("max",
+                       [](const Vectorf& a) -> std::pair<float, int> {
+                           return std::make_pair(a.Max().val, a.Max().idx);
+                       })
+                  .def("min", [](const Vectorf& a) -> std::pair<float, int> {
+                      return std::make_pair(a.Min().val, a.Min().idx);
+                  });
 
     auto vi = nb::class_<Vectori>(m, "VectoriBase")
                   .def(nb::init<unsigned long>())
                   .def(nb::init<const std::vector<int>&, unsigned long>())
                   .def("cpu", &Vectori::ToCPU)
-                  .def("shape", &Vectori::Shape);
+                  .def("shape", &Vectori::Shape)
+                  .def("sum", &Vectori::Sum)
+                  .def("mean", &Vectori::Mean)
+                  .def("max",
+                       [](const Vectori& a) -> std::pair<float, int> {
+                           return std::make_pair(a.Max().val, a.Max().idx);
+                       })
+                  .def("min", [](const Vectori& a) -> std::pair<float, int> {
+                      return std::make_pair(a.Min().val, a.Min().idx);
+                  });
 
     auto mf = nb::class_<Matrixf>(m, "MatrixfBase")
                   .def(nb::init<unsigned long, unsigned long>())

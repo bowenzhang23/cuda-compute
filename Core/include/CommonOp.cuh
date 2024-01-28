@@ -4,6 +4,12 @@
 
 enum class BinaryOp { EQ, NE, GT, GE, LT, LE, MIN, MAX };
 
+template <typename T>
+struct ValueIndex {
+    T   val;
+    int idx;
+} __attribute__((aligned(2 * std::max(sizeof(T), 4lu))));
+
 namespace CommonOp
 {
 template <typename T>
@@ -55,6 +61,64 @@ __forceinline__ __device__ T max(const T& lhs, const T& rhs)
 }
 
 template <typename T>
+__forceinline__ __device__ void max_assign(volatile ValueIndex<T>*       dst,
+                                           const volatile ValueIndex<T>* src)
+{
+    if (dst->val < src->val) {
+        dst->val = src->val;
+        dst->idx = src->idx;
+    }
+}
+
+template <typename T>
+__forceinline__ __device__ void max_assign(ValueIndex<T>&       dst,
+                                           const ValueIndex<T>& src)
+{
+    if (dst.val < src.val) {
+        dst.val = src.val;
+        dst.idx = src.idx;
+    }
+}
+
+template <typename T>
+__forceinline__ __device__ void max_assign(ValueIndex<T>& dst, T val, int idx)
+{
+    if (dst.val < val) {
+        dst.val = val;
+        dst.idx = idx;
+    }
+}
+
+template <typename T>
+__forceinline__ __device__ void min_assign(volatile ValueIndex<T>*       dst,
+                                           const volatile ValueIndex<T>* src)
+{
+    if (dst->val > src->val) {
+        dst->val = src->val;
+        dst->idx = src->idx;
+    }
+}
+
+template <typename T>
+__forceinline__ __device__ void min_assign(ValueIndex<T>&       dst,
+                                           const ValueIndex<T>& src)
+{
+    if (dst.val > src.val) {
+        dst.val = src.val;
+        dst.idx = src.idx;
+    }
+}
+
+template <typename T>
+__forceinline__ __device__ void min_assign(ValueIndex<T>& dst, T val, int idx)
+{
+    if (dst.val > val) {
+        dst.val = val;
+        dst.idx = idx;
+    }
+}
+
+template <typename T>
 __forceinline__ __device__ T binary_op(BinaryOp op, const T& lhs, const T& rhs)
 {
     switch (op) {
@@ -79,6 +143,30 @@ __forceinline__ __device__ void warp_sum(volatile T* smem, unsigned tid)
     if (block_dim >= 8) smem[tid] = smem[tid] + smem[tid + 4];
     if (block_dim >= 4) smem[tid] = smem[tid] + smem[tid + 2];
     if (block_dim >= 2) smem[tid] = smem[tid] + smem[tid + 1];
+}
+
+template <typename T, unsigned block_dim>
+__forceinline__ __device__ void warp_max(volatile ValueIndex<T>* smem,
+                                         unsigned                tid)
+{
+    if (block_dim >= 64) max_assign(smem + tid, smem + tid + 32);
+    if (block_dim >= 32) max_assign(smem + tid, smem + tid + 16);
+    if (block_dim >= 16) max_assign(smem + tid, smem + tid + 8);
+    if (block_dim >= 8) max_assign(smem + tid, smem + tid + 4);
+    if (block_dim >= 4) max_assign(smem + tid, smem + tid + 2);
+    if (block_dim >= 2) max_assign(smem + tid, smem + tid + 1);
+}
+
+template <typename T, unsigned block_dim>
+__forceinline__ __device__ void warp_min(volatile ValueIndex<T>* smem,
+                                         unsigned                tid)
+{
+    if (block_dim >= 64) min_assign(smem + tid, smem + tid + 32);
+    if (block_dim >= 32) min_assign(smem + tid, smem + tid + 16);
+    if (block_dim >= 16) min_assign(smem + tid, smem + tid + 8);
+    if (block_dim >= 8) min_assign(smem + tid, smem + tid + 4);
+    if (block_dim >= 4) min_assign(smem + tid, smem + tid + 2);
+    if (block_dim >= 2) min_assign(smem + tid, smem + tid + 1);
 }
 
 template <typename T>
@@ -113,6 +201,115 @@ __global__ void binary(T1* Z, const T2* X, T2 y, BinaryOp op, unsigned n)
     auto i      = threadIdx.x + blockIdx.x * blockDim.x;
     auto stride = blockDim.x * gridDim.x;
     for (; i < n; i += stride) { Z[i] = binary_op(op, X[i], y); }
+}
+
+template <typename T, unsigned block_dim>
+__global__ void sum_unroll(T* Z, const T* X, unsigned n)
+{
+    unsigned tid  = threadIdx.x;
+    unsigned i    = blockIdx.x * (block_dim * 2) + threadIdx.x;
+    unsigned grid = block_dim * 2 * gridDim.x;
+    if (i >= n) return;
+
+    __shared__ T Zs[block_dim];
+    Zs[tid] = (T) 0;
+
+    while (i < n) {
+        Zs[tid] += X[i];
+        if (i + block_dim < n) Zs[tid] += X[i + blockDim.x];
+        i += grid;
+    }
+    __syncthreads();
+
+    if (block_dim >= 512) {
+        if (tid < 256) { Zs[tid] += Zs[tid + 256]; }
+        __syncthreads();
+    }
+    if (block_dim >= 256) {
+        if (tid < 128) { Zs[tid] += Zs[tid + 128]; }
+        __syncthreads();
+    }
+    if (block_dim >= 128) {
+        if (tid < 64) { Zs[tid] += Zs[tid + 64]; }
+        __syncthreads();
+    }
+
+    if (tid < 32) CommonOp::warp_sum<T, block_dim>(Zs, tid);
+    if (tid == 0) Z[blockIdx.x] = Zs[0];
+}
+
+template <typename T, unsigned block_dim>
+__global__ void max_unroll(ValueIndex<T>* Z, const T* X, unsigned n)
+{
+    unsigned tid  = threadIdx.x;
+    unsigned i    = blockIdx.x * (block_dim * 2) + threadIdx.x;
+    unsigned grid = block_dim * 2 * gridDim.x;
+    if (i >= n) return;
+
+    __shared__ ValueIndex<T> Zs[block_dim];
+
+    while (i < n) {
+        Zs[tid].val = X[i];
+        Zs[tid].idx = i;
+        if (i + block_dim < n) {
+            max_assign(Zs[tid], X[i + blockDim.x], i + blockDim.x);
+        }
+        i += grid;
+    }
+    __syncthreads();
+
+    if (block_dim >= 512) {
+        if (tid < 256) { max_assign(Zs[tid], Zs[tid + 256]); }
+        __syncthreads();
+    }
+    if (block_dim >= 256) {
+        if (tid < 128) { max_assign(Zs[tid], Zs[tid + 128]); }
+        __syncthreads();
+    }
+    if (block_dim >= 128) {
+        if (tid < 64) { max_assign(Zs[tid], Zs[tid + 64]); }
+        __syncthreads();
+    }
+
+    if (tid < 32) CommonOp::warp_max<T, block_dim>(Zs, tid);
+    if (tid == 0) { Z[blockIdx.x] = Zs[0]; }
+}
+
+template <typename T, unsigned block_dim>
+__global__ void min_unroll(ValueIndex<T>* Z, const T* X, unsigned n)
+{
+    unsigned tid  = threadIdx.x;
+    unsigned i    = blockIdx.x * (block_dim * 2) + threadIdx.x;
+    unsigned grid = block_dim * 2 * gridDim.x;
+    if (i >= n) return;
+
+    __shared__ ValueIndex<T> Zs[block_dim];
+
+    while (i < n) {
+        Zs[tid].val = X[i];
+        Zs[tid].idx = i;
+        if (i + block_dim < n) {
+            min_assign(Zs[tid], X[i + blockDim.x], i + blockDim.x);
+        }
+        i += grid;
+    }
+    __syncthreads();
+
+    if (block_dim >= 512) {
+        if (tid < 256) { min_assign(Zs[tid], Zs[tid + 256]); }
+        __syncthreads();
+    }
+    if (block_dim >= 256) {
+        if (tid < 128) { min_assign(Zs[tid], Zs[tid + 128]); }
+        __syncthreads();
+    }
+    if (block_dim >= 128) {
+        if (tid < 64) { min_assign(Zs[tid], Zs[tid + 64]); }
+        __syncthreads();
+    }
+
+    if (tid < 32) CommonOp::warp_min<T, block_dim>(Zs, tid);
+    if (tid == 0) { Z[blockIdx.x] = Zs[0]; }
 }
 
 } // namespace CommonOp

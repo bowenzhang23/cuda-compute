@@ -11,7 +11,7 @@
 // #define DEBUG_PERFORMANCE
 
 template <typename T>
-concept NumericType = std::floating_point<T> || std::signed_integral<T>;
+concept NumericType = std::is_standard_layout_v<T>;
 
 template <NumericType T>
 class Vector;

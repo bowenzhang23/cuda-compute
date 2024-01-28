@@ -30,6 +30,12 @@ public:
     }
 
 public:
+    T             Sum() const;
+    T             Mean() const;
+    ValueIndex<T> Max() const;
+    ValueIndex<T> Min() const;
+
+public:
     using value_type = T;
     using int_type   = Vector<int>;
 
@@ -100,6 +106,87 @@ inline Vector<T>& Vector<T>::operator=(Vector&& other)
     CudaData<T>::operator=(std::move(other));
     this->m_len = other.m_len;
     return *this;
+}
+
+template <NumericType T>
+inline T Vector<T>::Sum() const
+{
+    constexpr unsigned nt = 256;
+    unsigned           nb = (Nlen() + 2 * nt - 1) / (2 * nt);
+    Vector<T>          z(nb, this->m_stream);
+
+#ifdef DEBUG_PERFORMANCE
+    Timer::Instance().Tick(s);
+#endif
+    CommonOp::sum_unroll<T, nt>
+        <<<nb, nt, 0, this->m_stream>>>(z.Data(), this->Data(), Nlen());
+#ifdef DEBUG_PERFORMANCE
+    Timer::Instance().Tick(s);
+    Timer::Instance().ShowElapsedTime("Vector Inner Product");
+#endif
+    auto sum_blocks = z.ToCPU();
+    CUDA_CHECK_LAST();
+    CUDA_CHECK(cudaStreamSynchronize(this->m_stream));
+
+    return std::accumulate(sum_blocks.begin(), sum_blocks.end(), (T) 0);
+}
+
+template <NumericType T>
+inline T Vector<T>::Mean() const
+{
+    return Sum() / (T) Nlen();
+}
+
+template <NumericType T>
+inline ValueIndex<T> Vector<T>::Max() const
+{
+    constexpr unsigned    nt = 256;
+    unsigned              nb = (Nlen() + 2 * nt - 1) / (2 * nt);
+    Vector<ValueIndex<T>> z(nb, this->m_stream);
+
+#ifdef DEBUG_PERFORMANCE
+    Timer::Instance().Tick(s);
+#endif
+    CommonOp::max_unroll<T, nt>
+        <<<nb, nt, 0, this->m_stream>>>(z.Data(), this->Data(), Nlen());
+#ifdef DEBUG_PERFORMANCE
+    Timer::Instance().Tick(s);
+    Timer::Instance().ShowElapsedTime("Vector Inner Product");
+#endif
+    auto max_blocks = z.ToCPU();
+    CUDA_CHECK_LAST();
+    CUDA_CHECK(cudaStreamSynchronize(this->m_stream));
+
+    auto max_iter = std::max_element(
+        max_blocks.begin(), max_blocks.end(),
+        [](const auto& lhs, const auto& rhs) { return lhs.val < rhs.val; });
+    return *max_iter;
+}
+
+template <NumericType T>
+inline ValueIndex<T> Vector<T>::Min() const
+{
+    constexpr unsigned    nt = 256;
+    unsigned              nb = (Nlen() + 2 * nt - 1) / (2 * nt);
+    Vector<ValueIndex<T>> z(nb, this->m_stream);
+
+#ifdef DEBUG_PERFORMANCE
+    Timer::Instance().Tick(s);
+#endif
+    CommonOp::min_unroll<T, nt>
+        <<<nb, nt, 0, this->m_stream>>>(z.Data(), this->Data(), Nlen());
+#ifdef DEBUG_PERFORMANCE
+    Timer::Instance().Tick(s);
+    Timer::Instance().ShowElapsedTime("Vector Inner Product");
+#endif
+    auto min_blocks = z.ToCPU();
+    CUDA_CHECK_LAST();
+    CUDA_CHECK(cudaStreamSynchronize(this->m_stream));
+
+    auto min_iter = std::min_element(
+        min_blocks.begin(), min_blocks.end(),
+        [](const auto& lhs, const auto& rhs) { return lhs.val < rhs.val; });
+    return *min_iter;
 }
 
 template <NumericType T>
