@@ -15,6 +15,12 @@ using Vectori = Vector<int>;
 using Matrixf = Matrix<float>;
 using Matrixi = Matrix<int>;
 
+template <typename T>
+std::pair<T, int> ToPair(const ValueIndex<T>& vi)
+{
+    return std::make_pair(vi.val, vi.idx);
+}
+
 template <typename Tnb, typename Tcd, typename Tcd_int, typename T>
 [[maybe_unused]] Tnb& add_arithmetic(Tnb& cls)
 {
@@ -83,13 +89,8 @@ NB_MODULE(cuda_compute, m)
                   .def("shape", &Vectorf::Shape)
                   .def("sum", &Vectorf::Sum)
                   .def("mean", &Vectorf::Mean)
-                  .def("max",
-                       [](const Vectorf& a) -> std::pair<float, int> {
-                           return std::make_pair(a.Max().val, a.Max().idx);
-                       })
-                  .def("min", [](const Vectorf& a) -> std::pair<float, int> {
-                      return std::make_pair(a.Min().val, a.Min().idx);
-                  });
+                  .def("max", [](const Vectorf& a) { return ToPair(a.Max()); })
+                  .def("min", [](const Vectorf& a) { return ToPair(a.Min()); });
 
     auto vi = nb::class_<Vectori>(m, "VectoriBase")
                   .def(nb::init<unsigned long>())
@@ -98,13 +99,8 @@ NB_MODULE(cuda_compute, m)
                   .def("shape", &Vectori::Shape)
                   .def("sum", &Vectori::Sum)
                   .def("mean", &Vectori::Mean)
-                  .def("max",
-                       [](const Vectori& a) -> std::pair<float, int> {
-                           return std::make_pair(a.Max().val, a.Max().idx);
-                       })
-                  .def("min", [](const Vectori& a) -> std::pair<float, int> {
-                      return std::make_pair(a.Min().val, a.Min().idx);
-                  });
+                  .def("max", [](const Vectori& a) { return ToPair(a.Max()); })
+                  .def("min", [](const Vectori& a) { return ToPair(a.Min()); });
 
     auto mf = nb::class_<Matrixf>(m, "MatrixfBase")
                   .def(nb::init<unsigned long, unsigned long>())
