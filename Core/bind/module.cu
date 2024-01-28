@@ -71,6 +71,10 @@ template <typename Tnb, typename Tcd, typename T>
 
 NB_MODULE(cuda_compute, m)
 {
+    nb::class_<Device>(m, "DeviceBase")
+        .def(nb::init<int>())
+        .def("id", &Device::ID);
+
     auto vf = nb::class_<Vectorf>(m, "VectorfBase")
                   .def(nb::init<unsigned long>())
                   .def(nb::init<const std::vector<float>&, unsigned long>())
@@ -109,8 +113,18 @@ NB_MODULE(cuda_compute, m)
     add_binary<decltype(m), Matrixf, float>(m);
     add_binary<decltype(m), Matrixi, int>(m);
 
+    m.def("use_device",
+          [](int id) { DeviceManager::Instance().UseDevice(id); });
+    m.def("current_device",
+          []() { return DeviceManager::Instance().CurrentDevice(); });
     m.def("device_query",
           []() { return DeviceManager::Instance().ToString(); });
+    m.def("timer_start", []() { Timer::Instance().Tick(); });
+    m.def("timer_stop", []() {
+        Timer::Instance().Tick();
+        return Timer::Instance().ElapsedTime();
+    });
+
     m.def("gemm", &MatMul<float>, "a"_a, "b"_a);
     m.def("gemm", &MatMul<int>, "a"_a, "b"_a);
     m.def("inner", &Inner<float>, "a"_a, "b"_a);

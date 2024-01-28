@@ -121,3 +121,24 @@ start = perf_counter_ns()
 d = c.transpose()
 end = perf_counter_ns()
 print(f"transpose duration = {(end - start) * 1e-6:.4f} ms")
+
+va = np.arange(1<<20, dtype=np.float32)
+vb = np.arange(1<<20, dtype=np.float32)
+
+a = va.tolist()
+b = vb.tolist()
+
+print("transfer")
+a = c2w.Vectorf(a, len(a))
+b = c2w.Vectorf(b, len(b))
+print("finished")
+
+start = perf_counter_ns()
+c = c2w.inner(a, b)
+end = perf_counter_ns()
+print(f"inner duration = {(end - start) * 1e-6:.4f} ms")
+
+start = perf_counter_ns()
+c = np.dot(a, b)
+end = perf_counter_ns()
+print(f"inner duration = {(end - start) * 1e-6:.4f} ms")

@@ -70,6 +70,17 @@ __forceinline__ __device__ T binary_op(BinaryOp op, const T& lhs, const T& rhs)
     }
 }
 
+template <typename T, unsigned block_dim>
+__forceinline__ __device__ void warp_sum(volatile T* smem, unsigned tid)
+{
+    if (block_dim >= 64) smem[tid] = smem[tid] + smem[tid + 32];
+    if (block_dim >= 32) smem[tid] = smem[tid] + smem[tid + 16];
+    if (block_dim >= 16) smem[tid] = smem[tid] + smem[tid + 8];
+    if (block_dim >= 8) smem[tid] = smem[tid] + smem[tid + 4];
+    if (block_dim >= 4) smem[tid] = smem[tid] + smem[tid + 2];
+    if (block_dim >= 2) smem[tid] = smem[tid] + smem[tid + 1];
+}
+
 template <typename T>
 __global__ void axpbyc(T* Z, const T a, const T* X, const T b, const T* Y,
                        const T c, unsigned n)

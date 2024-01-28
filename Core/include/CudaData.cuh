@@ -20,9 +20,6 @@ class Matrix;
 template <NumericType T>
 class CudaData;
 
-template <typename T>
-concept ContInt = requires { std::derived_from<T, CudaData<int>>; };
-
 template <NumericType T>
 class CudaData
 {

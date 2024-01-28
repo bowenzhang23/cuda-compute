@@ -243,7 +243,8 @@ inline T Inner(const Vector<T>& x, const Vector<T>& y)
 #ifdef DEBUG_PERFORMANCE
     Timer::Instance().Tick(s);
 #endif
-    VectorOp::inner<T, nt><<<nb, nt, 0, s>>>(z.Data(), x.Data(), y.Data(), len);
+    VectorOp::inner_unroll<T, nt>
+        <<<nb, nt, 0, s>>>(z.Data(), x.Data(), y.Data(), len);
 #ifdef DEBUG_PERFORMANCE
     Timer::Instance().Tick(s);
     Timer::Instance().ShowElapsedTime("Vector Inner Product");
