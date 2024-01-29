@@ -118,7 +118,7 @@ end = perf_counter_ns()
 print(f"matmul duration = {(end - start) * 1e-6:.4f} ms")
 
 start = perf_counter_ns()
-d = c.transpose()
+d = c.transpose().copy()
 end = perf_counter_ns()
 print(f"transpose duration = {(end - start) * 1e-6:.4f} ms")
 
@@ -166,3 +166,18 @@ start = perf_counter_ns()
 c = np.mean(va)
 end = perf_counter_ns()
 print(f"mean {c:.6f} duration = {(end - start) * 1e-6:.4f} ms")
+
+start = perf_counter_ns()
+c = +a
+end = perf_counter_ns()
+print(f"copy duration = {(end - start) * 1e-6:.4f} ms")
+
+start = perf_counter_ns()
+c = a.reversed()
+end = perf_counter_ns()
+print(f"reversed duration = {(end - start) * 1e-6:.4f} ms")
+
+start = perf_counter_ns()
+vc = va[::-1].copy()
+end = perf_counter_ns()
+print(f"reversed duration = {(end - start) * 1e-6:.4f} ms")

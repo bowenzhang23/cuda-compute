@@ -38,4 +38,23 @@ __global__ void inner_unroll(T* Z, const T* X, const T* Y, unsigned n)
     if (tid < 32) CommonOp::warp_sum<T, block_dim>(Zs, tid);
     if (tid == 0) Z[blockIdx.x] = Zs[0];
 }
+
+template <typename T, unsigned tile_dim = 256, unsigned block_dim = 32>
+__global__ void reversed(T* Z, const T* X, unsigned n)
+{
+    unsigned     i = threadIdx.x + blockIdx.x * tile_dim;
+    __shared__ T Xs[tile_dim];
+    for (int j = 0; j < tile_dim; j += block_dim) {
+        if (i + j < n)
+            Xs[threadIdx.x + j] = X[n - 1 - (i + j)];
+        else
+            Xs[threadIdx.x + j] = 0;
+    }
+    __syncthreads();
+
+    for (int j = 0; j < tile_dim; j += block_dim) {
+        if (i + j < n) Z[i + j] = Xs[threadIdx.x + j];
+    }
+}
+
 } // namespace VectorOp

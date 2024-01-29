@@ -82,41 +82,41 @@ NB_MODULE(cuda_compute, m)
         .def(nb::init<int>())
         .def("id", &Device::ID);
 
-    auto vf = nb::class_<Vectorf>(m, "VectorfBase")
-                  .def(nb::init<unsigned long>())
-                  .def(nb::init<const std::vector<float>&, unsigned long>())
-                  .def("cpu", &Vectorf::ToCPU)
-                  .def("shape", &Vectorf::Shape)
-                  .def("sum", &Vectorf::Sum)
-                  .def("mean", &Vectorf::Mean)
-                  .def("max", [](const Vectorf& a) { return ToPair(a.Max()); })
-                  .def("min", [](const Vectorf& a) { return ToPair(a.Min()); });
+    auto vf = nb::class_<Vectorf>(m, "VectorfBase");
+    vf.def(nb::init<unsigned long>());
+    vf.def(nb::init<const std::vector<float>&, unsigned long>());
+    vf.def("cpu", &Vectorf::ToCPU);
+    vf.def("shape", &Vectorf::Shape);
+    vf.def("sum", &Vectorf::Sum);
+    vf.def("mean", &Vectorf::Mean);
+    vf.def("max", [](const Vectorf& a) { return ToPair(a.Max()); });
+    vf.def("min", [](const Vectorf& a) { return ToPair(a.Min()); });
+    vf.def("reversed", &Vectorf::Reversed);
 
-    auto vi = nb::class_<Vectori>(m, "VectoriBase")
-                  .def(nb::init<unsigned long>())
-                  .def(nb::init<const std::vector<int>&, unsigned long>())
-                  .def("cpu", &Vectori::ToCPU)
-                  .def("shape", &Vectori::Shape)
-                  .def("sum", &Vectori::Sum)
-                  .def("mean", &Vectori::Mean)
-                  .def("max", [](const Vectori& a) { return ToPair(a.Max()); })
-                  .def("min", [](const Vectori& a) { return ToPair(a.Min()); });
+    auto vi = nb::class_<Vectori>(m, "VectoriBase");
+    vi.def(nb::init<unsigned long>());
+    vi.def(nb::init<const std::vector<int>&, unsigned long>());
+    vi.def("cpu", &Vectori::ToCPU);
+    vi.def("shape", &Vectori::Shape);
+    vi.def("sum", &Vectori::Sum);
+    vi.def("mean", &Vectori::Mean);
+    vi.def("max", [](const Vectori& a) { return ToPair(a.Max()); });
+    vi.def("min", [](const Vectori& a) { return ToPair(a.Min()); });
+    vi.def("reversed", &Vectori::Reversed);
 
-    auto mf = nb::class_<Matrixf>(m, "MatrixfBase")
-                  .def(nb::init<unsigned long, unsigned long>())
-                  .def(nb::init<const std::vector<float>&, unsigned long,
-                                unsigned long>())
-                  .def("cpu", &Matrixf::ToCPU)
-                  .def("shape", &Matrixf::Shape)
-                  .def("transpose", &Matrixf::Transpose);
+    auto mf = nb::class_<Matrixf>(m, "MatrixfBase");
+    mf.def(nb::init<unsigned long, unsigned long>());
+    mf.def(nb::init<const std::vector<float>&, unsigned long, unsigned long>());
+    mf.def("cpu", &Matrixf::ToCPU);
+    mf.def("shape", &Matrixf::Shape);
+    mf.def("transpose", &Matrixf::Transpose);
 
-    auto mi = nb::class_<Matrixi>(m, "MatrixiBase")
-                  .def(nb::init<unsigned long, unsigned long>())
-                  .def(nb::init<const std::vector<int>&, unsigned long,
-                                unsigned long>())
-                  .def("cpu", &Matrixi::ToCPU)
-                  .def("shape", &Matrixi::Shape)
-                  .def("transpose", &Matrixi::Transpose);
+    auto mi = nb::class_<Matrixi>(m, "MatrixiBase");
+    mi.def(nb::init<unsigned long, unsigned long>());
+    mi.def(nb::init<const std::vector<int>&, unsigned long, unsigned long>());
+    mi.def("cpu", &Matrixi::ToCPU);
+    mi.def("shape", &Matrixi::Shape);
+    mi.def("transpose", &Matrixi::Transpose);
 
     add_arithmetic<decltype(vf), Vectorf, Vectori, float>(vf);
     add_arithmetic<decltype(vi), Vectori, Vectori, int>(vi);

@@ -79,6 +79,16 @@ TEST(Vector, MaxAndMin)
     EXPECT_EQ(min_vi.idx, 2002);
 }
 
+TEST(Vector, Reversed)
+{
+    constexpr std::size_t len = 255 + 4096;
+    std::vector<int>    x(len);
+    std::generate(x.begin(), x.end(), [i = 0]() mutable { return i++; });
+    Vector<int> vx(x, len);
+    std::reverse(x.begin(), x.end());
+    EXPECT_EQ(vx.Reversed().ToCPU(), x);
+}
+
 TEST(Vector, Linear)
 {
     constexpr std::size_t len = 4001;
