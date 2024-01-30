@@ -144,4 +144,8 @@ NB_MODULE(cuda_compute, m)
     m.def("gemm", &MatMul<int>, "a"_a, "b"_a);
     m.def("inner", &Inner<float>, "a"_a, "b"_a);
     m.def("inner", &Inner<int>, "a"_a, "b"_a);
+    m.def("mod2", &Mod2<float>, "a"_a);
+    m.def("mod2", &Mod2<int>, "a"_a);
+    m.def("mod", &Mod<float>, "a"_a);
+    m.def("distance", &Distance<float>, "a"_a, "b"_a);
 }

@@ -55,3 +55,15 @@ def gemm(a, b):
 
 def inner(a, b):
     return cuda_compute.inner(a, b)
+
+
+def mod2(a):
+    return cuda_compute.mod2(a)
+
+
+def mod(a):
+    return cuda_compute.mod(a)
+
+
+def distance(a, b):
+    return cuda_compute.distance(a, b)

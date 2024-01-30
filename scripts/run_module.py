@@ -40,6 +40,9 @@ print(f"{c2w.min(a, 3).cpu()=}")
 print(f"{c2w.min(3, a).cpu()=}")
 print(f"{c2w.inner(a, b)=}")
 print(f"{c2w.inner(a, c)=}")
+print(f"{c2w.distance(a, c)=}")
+print(f"{c2w.mod(a)=}")
+print(f"{c2w.mod2(a)=}")
 
 
 a = c2w.Matrixf([1, 2, 3, 4], 2, 2)
@@ -122,8 +125,8 @@ d = c.transpose().copy()
 end = perf_counter_ns()
 print(f"transpose duration = {(end - start) * 1e-6:.4f} ms")
 
-va = np.arange(1 << 20, dtype=np.float32)
-vb = np.arange(1 << 20, dtype=np.float32)
+va = np.arange(1 << 24, dtype=np.float32)
+vb = np.arange(1 << 24, dtype=np.float32)
 
 a = va.tolist()
 b = vb.tolist()

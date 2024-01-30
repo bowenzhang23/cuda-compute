@@ -366,3 +366,23 @@ inline T Inner(const Vector<T>& x, const Vector<T>& y)
 
     return std::accumulate(inner_blocks.begin(), inner_blocks.end(), (T) 0);
 }
+
+template <NumericType T>
+inline T Mod2(const Vector<T>& x)
+{
+    return Inner(x, x);
+}
+
+template <NumericType T>
+inline T Mod(const Vector<T>& x)
+{
+    return std::sqrt(Mod2(x));
+}
+
+template <NumericType T>
+inline T Distance(const Vector<T>& x, const Vector<T>& y)
+{
+    if (&x == &y) return (T) 0;
+    Vector<T> diff = x - y;
+    return Mod(diff);
+}

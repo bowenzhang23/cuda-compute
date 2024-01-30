@@ -1,5 +1,9 @@
 cmake_minimum_required(VERSION 3.20)
 
+set(CMAKE_C_COMPILER gcc-12)
+set(CMAKE_CXX_COMPILER g++-12)
+set(CMAKE_CUDA_COMPILER nvcc)
+
 add_compile_options(
   -std=c++20
   -Wextra
@@ -13,8 +17,6 @@ add_compile_definitions(
   $<$<CONFIG:DEBUG>:DEBUG_CONSTRUCTOR>
   $<$<CONFIG:DEBUG>:DEBUG_PERFORMANCE>)
 
-set(CMAKE_C_COMPILER gcc-12)
-set(CMAKE_CXX_COMPILER g++-12)
 enable_testing()
 
 project(
