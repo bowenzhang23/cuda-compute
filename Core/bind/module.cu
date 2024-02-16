@@ -92,6 +92,7 @@ NB_MODULE(cuda_compute, m)
     vf.def("max", [](const Vectorf& a) { return ToPair(a.Max()); });
     vf.def("min", [](const Vectorf& a) { return ToPair(a.Min()); });
     vf.def("reversed", &Vectorf::Reversed);
+    vf.def("sort", &Vectorf::Sort, "ascending"_a = true);
 
     auto vi = nb::class_<Vectori>(m, "VectoriBase");
     vi.def(nb::init<unsigned long>());
@@ -103,6 +104,7 @@ NB_MODULE(cuda_compute, m)
     vi.def("max", [](const Vectori& a) { return ToPair(a.Max()); });
     vi.def("min", [](const Vectori& a) { return ToPair(a.Min()); });
     vi.def("reversed", &Vectori::Reversed);
+    vi.def("sort", &Vectori::Sort, "ascending"_a = true);
 
     auto mf = nb::class_<Matrixf>(m, "MatrixfBase");
     mf.def(nb::init<unsigned long, unsigned long>());

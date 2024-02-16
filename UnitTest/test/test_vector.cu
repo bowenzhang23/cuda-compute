@@ -89,6 +89,39 @@ TEST(Vector, Reversed)
     EXPECT_EQ(vx.Reversed().ToCPU(), x);
 }
 
+TEST(Vector, SortPowerOfTwo)
+{
+    constexpr std::size_t len = 4096;
+    std::vector<int>    x(len);
+    std::generate(x.begin(), x.end(), [i = len]() mutable { return i--; });
+    Vector<int> vx(x, len);
+    vx.Sort();
+    std::sort(x.begin(), x.end());
+    EXPECT_EQ(vx.ToCPU(), x);
+}
+
+TEST(Vector, SortAscending)
+{
+    constexpr std::size_t len = 255 + 4096;
+    std::vector<int>    x(len);
+    std::generate(x.begin(), x.end(), [i = len]() mutable { return i--; });
+    Vector<int> vx(x, len);
+    vx.Sort();
+    std::sort(x.begin(), x.end());
+    EXPECT_EQ(vx.ToCPU(), x);
+}
+
+TEST(Vector, SortDescending)
+{
+    constexpr std::size_t len = 255 + 4096;
+    std::vector<int>    x(len);
+    std::generate(x.begin(), x.end(), [i = 0]() mutable { return i++; });
+    Vector<int> vx(x, len);
+    vx.Sort(false);
+    std::sort(x.begin(), x.end(), std::greater<int>());
+    EXPECT_EQ(vx.ToCPU(), x);
+}
+
 TEST(Vector, Linear)
 {
     constexpr std::size_t len = 4001;

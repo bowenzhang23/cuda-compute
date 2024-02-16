@@ -30,7 +30,7 @@ def current_device():
 
 
 def device_query():
-    cuda_compute.device_query()
+    print(cuda_compute.device_query())
 
 
 def timer_start():

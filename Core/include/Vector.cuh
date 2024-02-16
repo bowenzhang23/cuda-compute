@@ -4,6 +4,7 @@
 #include "CudaData.cuh"
 #include "DeviceManager.cuh"
 #include "VectorOp.cuh"
+#include <iostream>
 
 template <NumericType T>
 class Vector : public CudaData<T>
@@ -35,6 +36,7 @@ public:
     ValueIndex<T> Max() const;
     ValueIndex<T> Min() const;
     Vector<T>     Reversed() const;
+    void          Sort(bool ascending = true);
 
 public:
     using value_type = T;
@@ -211,6 +213,46 @@ inline Vector<T> Vector<T>::Reversed() const
     CUDA_CHECK(cudaStreamSynchronize(this->S()));
 
     return z;
+}
+
+template <NumericType T>
+inline void Vector<T>::Sort(bool ascending)
+{
+    T    padding_value { 0 };
+    auto n_next_po2 = VectorOp::next_po2(Nlen());
+
+    constexpr unsigned nt = 128;
+    unsigned           nb = (n_next_po2 + nt - 1) / nt;
+
+#ifdef DEBUG_PERFORMANCE
+    Timer::Instance().Tick(this->S());
+#endif
+    if (n_next_po2 == Nlen()) {
+        for (unsigned k = 2; k <= n_next_po2; k <<= 1) {
+            for (unsigned j = k >> 1; j > 0; j >>= 1) {
+                VectorOp::sort<T><<<nb, nt, 0, this->S()>>>(this->Data(), k, j,
+                                                            Nlen(), ascending);
+            }
+        }
+    } else {
+        padding_value      = ascending ? Max().val : Min().val;
+        unsigned       len = n_next_po2 - Nlen();
+        std::vector<T> padding_vec(len, padding_value);
+        Vector<T>      padding(padding_vec, len, this->S());
+
+        for (unsigned k = 2; k <= n_next_po2; k <<= 1) {
+            for (unsigned j = k >> 1; j > 0; j >>= 1) {
+                VectorOp::sort_padding<T><<<nb, nt, 0, this->S()>>>(
+                    this->Data(), padding.Data(), k, j, Nlen(), ascending);
+            }
+        }
+    }
+#ifdef DEBUG_PERFORMANCE
+    Timer::Instance().Tick(this->S());
+    Timer::Instance().ShowElapsedTime("Vector Sort");
+#endif
+    CUDA_CHECK_LAST();
+    CUDA_CHECK(cudaStreamSynchronize(this->S()));
 }
 
 template <NumericType T>

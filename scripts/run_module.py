@@ -2,7 +2,7 @@ import cuda_compute_wrapper as c2w
 from time import perf_counter_ns
 import numpy as np
 
-print(c2w.device_query())
+c2w.device_query()
 
 a = c2w.Vectorf([1, 2, 3, 4, 5], 5)
 b = c2w.Vectorf([1, 2, 3, 4, 5], 5)
@@ -44,6 +44,11 @@ print(f"{c2w.distance(a, c)=}")
 print(f"{c2w.mod(a)=}")
 print(f"{c2w.mod2(a)=}")
 
+d = c2w.Vectori([5, 7, 3, 1, -1, -5, -6, 0, 4], 9)
+d.sort()
+print(f"{d.cpu()=}")
+d.sort(False)
+print(f"{d.cpu()=}")
 
 a = c2w.Matrixf([1, 2, 3, 4], 2, 2)
 b = c2w.Matrixf([1, 2, 3, 4], 2, 2)
@@ -146,7 +151,7 @@ c = np.dot(va, vb)
 end = perf_counter_ns()
 print(f"inner duration = {(end - start) * 1e-6:.4f} ms")
 
-va = np.random.rand(1 << 20)
+va = np.random.rand((1 << 20) - 100)
 a = va.tolist()
 a = c2w.Vectorf(a, len(a))
 
@@ -184,3 +189,13 @@ start = perf_counter_ns()
 vc = va[::-1].copy()
 end = perf_counter_ns()
 print(f"reversed duration = {(end - start) * 1e-6:.4f} ms")
+
+start = perf_counter_ns()
+a.sort()
+end = perf_counter_ns()
+print(f"sort duration = {(end - start) * 1e-6:.4f} ms")
+
+start = perf_counter_ns()
+np.sort(va)
+end = perf_counter_ns()
+print(f"sort duration = {(end - start) * 1e-6:.4f} ms")
