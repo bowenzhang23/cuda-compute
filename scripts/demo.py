@@ -1,8 +1,4 @@
 import cuda_compute_wrapper as c2w
-from time import perf_counter_ns
-import numpy as np
-
-c2w.device_query()
 
 a = c2w.Vectorf([1, 2, 3, 4, 5], 5)
 b = c2w.Vectorf([1, 2, 3, 4, 5], 5)
