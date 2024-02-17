@@ -26,3 +26,5 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${PWD}/${ARCH_STR}/lib/
 export PYTHONPATH=$PYTHONPATH:${PWD}/${ARCH_STR}/lib/
 
 popd
+
+export PYTHONPATH=$PYTHONPATH:./scripts/
