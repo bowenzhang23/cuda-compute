@@ -95,7 +95,7 @@ TEST(Vector, SortPowerOfTwo)
     std::vector<int>    x(len);
     std::generate(x.begin(), x.end(), [i = len]() mutable { return i--; });
     Vector<int> vx(x, len);
-    vx.Sort();
+    vx.Sort_();
     std::sort(x.begin(), x.end());
     EXPECT_EQ(vx.ToCPU(), x);
 }
@@ -106,7 +106,7 @@ TEST(Vector, SortAscending)
     std::vector<int>    x(len);
     std::generate(x.begin(), x.end(), [i = len]() mutable { return i--; });
     Vector<int> vx(x, len);
-    vx.Sort();
+    vx.Sort_();
     std::sort(x.begin(), x.end());
     EXPECT_EQ(vx.ToCPU(), x);
 }
@@ -117,7 +117,7 @@ TEST(Vector, SortDescending)
     std::vector<int>    x(len);
     std::generate(x.begin(), x.end(), [i = 0]() mutable { return i++; });
     Vector<int> vx(x, len);
-    vx.Sort(false);
+    vx.Sort_(false);
     std::sort(x.begin(), x.end(), std::greater<int>());
     EXPECT_EQ(vx.ToCPU(), x);
 }

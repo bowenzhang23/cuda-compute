@@ -37,6 +37,7 @@ public:
 
 public:
     Matrix Transpose() const;
+    void Reshape_(size_t nrow);
 
 private:
     size_t m_nrow;
@@ -140,6 +141,18 @@ inline Matrix<T> Matrix<T>::Transpose() const
     CUDA_CHECK_LAST();
     CUDA_CHECK(cudaStreamSynchronize(this->m_stream));
     return xt;
+}
+
+template <NumericType T>
+inline void Matrix<T>::Reshape_(size_t nrow)
+{
+    auto ncol = m_nrow * m_ncol / nrow;
+    if (m_nrow * m_ncol == nrow * ncol) {
+        m_nrow = nrow;
+        m_ncol = ncol;
+    } else {
+        fprintf(stdout, "Imcompatible size, failed to reshape!\n");
+    }
 }
 
 template <NumericType T>

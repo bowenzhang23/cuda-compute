@@ -76,6 +76,36 @@ template <typename Tnb, typename Tcd, typename T>
     return m;
 }
 
+template <typename Tnb, typename Tcd, typename T>
+[[maybe_unused]] Tnb& add_vector_common(Tnb& cls)
+{
+    cls.def(nb::init<unsigned long>());
+    cls.def(nb::init<const std::vector<T>&, unsigned long>());
+    cls.def("cpu", &Tcd::ToCPU);
+    cls.def("shape", &Tcd::Shape);
+    cls.def("sum", &Tcd::Sum);
+    cls.def("mean", &Tcd::Mean);
+    cls.def("max", [](const Tcd& a) { return ToPair(a.Max()); });
+    cls.def("min", [](const Tcd& a) { return ToPair(a.Min()); });
+    cls.def("reversed", &Tcd::Reversed);
+    cls.def("sort_", &Tcd::Sort_, "ascending"_a = true);
+
+    return cls;
+}
+
+template <typename Tnb, typename Tcd, typename T>
+[[maybe_unused]] Tnb& add_matrix_common(Tnb& cls)
+{
+    cls.def(nb::init<unsigned long, unsigned long>());
+    cls.def(nb::init<const std::vector<T>&, unsigned long, unsigned long>());
+    cls.def("cpu", &Tcd::ToCPU);
+    cls.def("shape", &Tcd::Shape);
+    cls.def("transpose", &Tcd::Transpose);
+    cls.def("reshape_", &Tcd::Reshape_);
+
+    return cls;
+}
+
 NB_MODULE(cuda_compute, m)
 {
     nb::class_<Device>(m, "DeviceBase")
@@ -83,47 +113,20 @@ NB_MODULE(cuda_compute, m)
         .def("id", &Device::ID);
 
     auto vf = nb::class_<Vectorf>(m, "VectorfBase");
-    vf.def(nb::init<unsigned long>());
-    vf.def(nb::init<const std::vector<float>&, unsigned long>());
-    vf.def("cpu", &Vectorf::ToCPU);
-    vf.def("shape", &Vectorf::Shape);
-    vf.def("sum", &Vectorf::Sum);
-    vf.def("mean", &Vectorf::Mean);
-    vf.def("max", [](const Vectorf& a) { return ToPair(a.Max()); });
-    vf.def("min", [](const Vectorf& a) { return ToPair(a.Min()); });
-    vf.def("reversed", &Vectorf::Reversed);
-    vf.def("sort", &Vectorf::Sort, "ascending"_a = true);
-
     auto vi = nb::class_<Vectori>(m, "VectoriBase");
-    vi.def(nb::init<unsigned long>());
-    vi.def(nb::init<const std::vector<int>&, unsigned long>());
-    vi.def("cpu", &Vectori::ToCPU);
-    vi.def("shape", &Vectori::Shape);
-    vi.def("sum", &Vectori::Sum);
-    vi.def("mean", &Vectori::Mean);
-    vi.def("max", [](const Vectori& a) { return ToPair(a.Max()); });
-    vi.def("min", [](const Vectori& a) { return ToPair(a.Min()); });
-    vi.def("reversed", &Vectori::Reversed);
-    vi.def("sort", &Vectori::Sort, "ascending"_a = true);
 
     auto mf = nb::class_<Matrixf>(m, "MatrixfBase");
-    mf.def(nb::init<unsigned long, unsigned long>());
-    mf.def(nb::init<const std::vector<float>&, unsigned long, unsigned long>());
-    mf.def("cpu", &Matrixf::ToCPU);
-    mf.def("shape", &Matrixf::Shape);
-    mf.def("transpose", &Matrixf::Transpose);
-
     auto mi = nb::class_<Matrixi>(m, "MatrixiBase");
-    mi.def(nb::init<unsigned long, unsigned long>());
-    mi.def(nb::init<const std::vector<int>&, unsigned long, unsigned long>());
-    mi.def("cpu", &Matrixi::ToCPU);
-    mi.def("shape", &Matrixi::Shape);
-    mi.def("transpose", &Matrixi::Transpose);
 
     add_arithmetic<decltype(vf), Vectorf, Vectori, float>(vf);
     add_arithmetic<decltype(vi), Vectori, Vectori, int>(vi);
     add_arithmetic<decltype(mf), Matrixf, Matrixi, float>(mf);
     add_arithmetic<decltype(mi), Matrixi, Matrixi, int>(mi);
+
+    add_vector_common<decltype(vf), Vectorf, float>(vf);
+    add_vector_common<decltype(vi), Vectori, int>(vi);
+    add_matrix_common<decltype(mf), Matrixf, float>(mf);
+    add_matrix_common<decltype(mi), Matrixi, int>(mi);
 
     add_binary<decltype(m), Vectorf, float>(m);
     add_binary<decltype(m), Vectori, int>(m);

@@ -36,7 +36,7 @@ public:
     ValueIndex<T> Max() const;
     ValueIndex<T> Min() const;
     Vector<T>     Reversed() const;
-    void          Sort(bool ascending = true);
+    void          Sort_(bool ascending = true);
 
 public:
     using value_type = T;
@@ -216,7 +216,7 @@ inline Vector<T> Vector<T>::Reversed() const
 }
 
 template <NumericType T>
-inline void Vector<T>::Sort(bool ascending)
+inline void Vector<T>::Sort_(bool ascending)
 {
     T    padding_value { 0 };
     auto n_next_po2 = VectorOp::next_po2(Nlen());

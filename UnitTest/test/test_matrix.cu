@@ -143,6 +143,20 @@ TEST(Matrix, TransposeSelf)
     EXPECT_TRUE(all_equal);
 }
 
+TEST(Matrix, Reshape)
+{
+    constexpr std::size_t row = 10;
+    constexpr std::size_t col = 10;
+    constexpr std::size_t len = row * col;
+    std::vector<int>      x(len);
+    std::generate(x.begin(), x.end(), [i = 0]() mutable { return i++; });
+    Matrix<int> mx(x.data(), row, col);
+    mx.Reshape_(1);
+    EXPECT_EQ(mx.Nrow(), 1);
+    EXPECT_EQ(mx.Ncol(), 100);
+    EXPECT_EQ(mx.ToCPU(), x);
+}
+
 TEST(Matrix, MatMulSmall)
 {
     constexpr std::size_t m = 641;

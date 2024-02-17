@@ -13,6 +13,6 @@ end = perf_counter_ns()
 print(f"Duration = {(end - start) * 1e-6:.4f} ms")
 
 start = perf_counter_ns()
-vx.sort()
+vx.sort_()
 end = perf_counter_ns()
 print(f"Duration = {(end - start) * 1e-6:.4f} ms")
