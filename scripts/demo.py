@@ -41,9 +41,9 @@ print(f"{c2w.mod(a)=}")
 print(f"{c2w.mod2(a)=}")
 
 d = c2w.Vectori([5, 7, 3, 1, -1, -5, -6, 0, 4], 9)
-d.sort()
+d.sort_()
 print(f"{d.cpu()=}")
-d.sort(False)
+d.sort_(False)
 print(f"{d.cpu()=}")
 
 a = c2w.Matrixf([1, 2, 3, 4], 2, 2)
