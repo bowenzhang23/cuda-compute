@@ -151,4 +151,20 @@ __global__ void gemm_large(T* Z, const T* X, const T* Y, unsigned m, unsigned k,
     }
 }
 
+template <typename T>
+__global__ void cp_row(T* vec_row, const T* mat, unsigned i, unsigned n_col)
+{
+    auto vj      = threadIdx.x + blockIdx.x * blockDim.x;
+    auto stride = blockDim.x * gridDim.x;
+    for (; vj < n_col; vj += stride) { vec_row[vj] = mat[i * n_col + vj]; }
+}
+
+template <typename T>
+__global__ void cp_col(T* vec_col, const T* mat, unsigned j, unsigned n_row, unsigned n_col)
+{
+    auto vi      = threadIdx.x + blockIdx.x * blockDim.x;
+    auto stride = blockDim.x * gridDim.x;
+    for (; vi < n_row; vi += stride) { vec_col[vi] = mat[vi * n_col + j]; }
+}
+
 } // namespace MatrixOp

@@ -81,6 +81,7 @@ template <typename Tnb, typename Tcd, typename T>
 {
     cls.def(nb::init<unsigned long>());
     cls.def(nb::init<const std::vector<T>&, unsigned long>());
+    cls.def("into", &Tcd::Into, "ncol"_a);
     cls.def("cpu", &Tcd::ToCPU);
     cls.def("shape", &Tcd::Shape);
     cls.def("sum", &Tcd::Sum);
@@ -98,12 +99,25 @@ template <typename Tnb, typename Tcd, typename T>
 {
     cls.def(nb::init<unsigned long, unsigned long>());
     cls.def(nb::init<const std::vector<T>&, unsigned long, unsigned long>());
+    cls.def("reshape_", &Tcd::Reshape_, "ncol"_a);
+    cls.def("into", &Tcd::Into);
+    cls.def("row", &Tcd::Row, "i"_a);
+    cls.def("col", &Tcd::Col, "j"_a);
     cls.def("cpu", &Tcd::ToCPU);
     cls.def("shape", &Tcd::Shape);
     cls.def("transpose", &Tcd::Transpose);
-    cls.def("reshape_", &Tcd::Reshape_);
 
     return cls;
+}
+
+template <typename Tnb, typename Tcd1, typename Tcd2, typename T>
+[[maybe_unused]] Tnb& add_inner_product(Tnb& m)
+{
+    m.def(
+        "inner", [](const Tcd1& a, const Tcd2& b) { return Inner<T>(a, b); },
+        "a"_a, "b"_a);
+
+    return m;
 }
 
 NB_MODULE(cuda_compute, m)
@@ -133,6 +147,13 @@ NB_MODULE(cuda_compute, m)
     add_binary<decltype(m), Matrixf, float>(m);
     add_binary<decltype(m), Matrixi, int>(m);
 
+    add_inner_product<decltype(m), Vectorf, Vectorf, float>(m);
+    add_inner_product<decltype(m), Vectori, Vectori, int>(m);
+    add_inner_product<decltype(m), Matrixf, Vectorf, float>(m);
+    add_inner_product<decltype(m), Matrixi, Vectori, int>(m);
+    add_inner_product<decltype(m), Vectorf, Matrixf, float>(m);
+    add_inner_product<decltype(m), Vectori, Matrixi, int>(m);
+
     m.def("use_device",
           [](int id) { DeviceManager::Instance().UseDevice(id); });
     m.def("current_device",
@@ -147,10 +168,7 @@ NB_MODULE(cuda_compute, m)
 
     m.def("gemm", &MatMul<float>, "a"_a, "b"_a);
     m.def("gemm", &MatMul<int>, "a"_a, "b"_a);
-    m.def("inner", &Inner<float>, "a"_a, "b"_a);
-    m.def("inner", &Inner<int>, "a"_a, "b"_a);
     m.def("mod2", &Mod2<float>, "a"_a);
-    m.def("mod2", &Mod2<int>, "a"_a);
     m.def("mod", &Mod<float>, "a"_a);
     m.def("distance", &Distance<float>, "a"_a, "b"_a);
 }

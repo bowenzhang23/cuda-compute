@@ -14,7 +14,9 @@ public:
     Vector(const T* hmem, size_t len, cudaStream_t stream = 0);
     Vector(const std::vector<T>& hmem, size_t len, cudaStream_t stream = 0);
     Vector(const Vector& other);
+    Vector(const Matrix<T>& other);
     Vector(Vector&& other);
+    Vector(Matrix<T>&& other);
     Vector& operator=(const Vector& other);
     Vector& operator=(Vector&& other);
 
@@ -31,16 +33,19 @@ public:
     }
 
 public:
+    using value_type = T;
+    using int_type   = Vector<int>;
+
+public:
+    Matrix<T>     Into(size_t ncol) const;
+
+public:
     T             Sum() const;
     T             Mean() const;
     ValueIndex<T> Max() const;
     ValueIndex<T> Min() const;
     Vector<T>     Reversed() const;
     void          Sort_(bool ascending = true);
-
-public:
-    using value_type = T;
-    using int_type   = Vector<int>;
 
 private:
     size_t m_len;
@@ -81,11 +86,29 @@ inline Vector<T>::Vector(const Vector& other)
 }
 
 template <NumericType T>
+inline Vector<T>::Vector(const Matrix<T>& other)
+    : CudaData<T>(other), m_len(other.Nrow() * other.Ncol())
+{
+#ifdef DEBUG_CONSTRUCTOR
+    fprintf(stdout, "Vector copy Matrix ctor\n");
+#endif
+}
+
+template <NumericType T>
 inline Vector<T>::Vector(Vector&& other)
     : CudaData<T>(std::move(other)), m_len(other.m_len)
 {
 #ifdef DEBUG_CONSTRUCTOR
     fprintf(stdout, "Vector move ctor\n");
+#endif
+}
+
+template <NumericType T>
+inline Vector<T>::Vector(Matrix<T>&& other)
+    : CudaData<T>(std::move(other)), m_len(other.Nrow() * other.Ncol())
+{
+#ifdef DEBUG_CONSTRUCTOR
+    fprintf(stdout, "Vector move Matrix ctor\n");
 #endif
 }
 
@@ -109,6 +132,12 @@ inline Vector<T>& Vector<T>::operator=(Vector&& other)
     CudaData<T>::operator=(std::move(other));
     this->m_len = other.m_len;
     return *this;
+}
+
+template <NumericType T>
+inline Matrix<T> Vector<T>::Into(size_t ncol) const
+{
+    return Matrix<T>(*this, ncol);
 }
 
 template <NumericType T>

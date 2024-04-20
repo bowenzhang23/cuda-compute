@@ -14,7 +14,9 @@ public:
     Matrix(const std::vector<T>& hmem, size_t nrow, size_t ncol,
            cudaStream_t stream = 0);
     Matrix(const Matrix& other);
+    Matrix(const Vector<T>& other, size_t ncol);
     Matrix(Matrix&& other);
+    Matrix(Vector<T>&& other, size_t ncol);
     Matrix& operator=(const Matrix& other);
     Matrix& operator=(Matrix&& other);
 
@@ -27,17 +29,22 @@ public:
     }
 
     virtual inline std::vector<size_t> Shape() const override
-    {
+    {       
         return { Nrow(), Ncol() };
     }
 
 public:
     using value_type = T;
-    using int_type = Matrix<int>;
+    using int_type   = Matrix<int>;
+
+public:
+    void      Reshape_(size_t ncol);
+    Vector<T> Into() const;
+    Vector<T> Row(size_t i) const;
+    Vector<T> Col(size_t i) const;
 
 public:
     Matrix Transpose() const;
-    void Reshape_(size_t nrow);
 
 private:
     size_t m_nrow;
@@ -84,11 +91,41 @@ inline Matrix<T>::Matrix(const Matrix& other)
 }
 
 template <NumericType T>
+inline Matrix<T>::Matrix(const Vector<T>& other, size_t ncol)
+    : CudaData<T>(other), m_nrow(other.Nlen() / ncol), m_ncol(ncol)
+{
+    if (Nrow() * Ncol() != other.Nlen()) {
+        fprintf(stdout,
+                "Size of vector [%lu] != row x col [%lu]"
+                ". Unexpected behaviour may occur!\n",
+                other.Nlen(), Nrow() * Ncol());
+    }
+#ifdef DEBUG_CONSTRUCTOR
+    fprintf(stdout, "Matrix copy Vector ctor\n");
+#endif
+}
+
+template <NumericType T>
 inline Matrix<T>::Matrix(Matrix&& other)
     : CudaData<T>(std::move(other)), m_nrow(other.m_nrow), m_ncol(other.m_ncol)
 {
 #ifdef DEBUG_CONSTRUCTOR
     fprintf(stdout, "Matrix move ctor\n");
+#endif
+}
+
+template <NumericType T>
+inline Matrix<T>::Matrix(Vector<T>&& other, size_t ncol)
+    : CudaData<T>(std::move(other)), m_nrow(other.Nlen() / ncol), m_ncol(ncol)
+{
+    if (Nrow() * Ncol() != other.Nlen()) {
+        fprintf(stdout,
+                "Size of vector [%lu] != row x col [%lu]"
+                ". Unexpected behaviour may occur!\n",
+                other.Nlen(), Nrow() * Ncol());
+    }
+#ifdef DEBUG_CONSTRUCTOR
+    fprintf(stdout, "Matrix move Vector ctor\n");
 #endif
 }
 
@@ -117,6 +154,64 @@ inline Matrix<T>& Matrix<T>::operator=(Matrix&& other)
 }
 
 template <NumericType T>
+inline void Matrix<T>::Reshape_(size_t ncol)
+{
+    auto nrow = m_nrow * m_ncol / ncol;
+    if (m_nrow * m_ncol == nrow * ncol) {
+        m_nrow = nrow;
+        m_ncol = ncol;
+    } else {
+        fprintf(stdout, "Imcompatible size, failed to reshape!\n");
+    }
+}
+
+template <NumericType T>
+inline Vector<T> Matrix<T>::Into() const
+{
+    return Vector<T>(*this);
+}
+
+template <NumericType T>
+inline Vector<T> Matrix<T>::Row(size_t i) const
+{
+    Vector<T> v(Ncol(), this->S());
+
+    unsigned nb = DeviceManager::Curr().Prop().multiProcessorCount;
+    unsigned nt = 32;
+#ifdef DEBUG_PERFORMANCE
+    Timer::Instance().Tick(s);
+#endif
+    MatrixOp::cp_row<<<nb, nt, 0, this->S()>>>(v.Data(), this->Data(), i,
+                                               Ncol());
+#ifdef DEBUG_PERFORMANCE
+    Timer::Instance().Tick(s);
+    Timer::Instance().ShowElapsedTime("Matrix Linear");
+#endif
+
+    return v;
+}
+
+template <NumericType T>
+inline Vector<T> Matrix<T>::Col(size_t j) const
+{
+    Vector<T> v(Nrow(), this->S());
+
+    unsigned nb = DeviceManager::Curr().Prop().multiProcessorCount;
+    unsigned nt = 32;
+#ifdef DEBUG_PERFORMANCE
+    Timer::Instance().Tick(s);
+#endif
+    MatrixOp::cp_col<<<nb, nt, 0, this->S()>>>(v.Data(), this->Data(), j,
+                                               Nrow(), Ncol());
+#ifdef DEBUG_PERFORMANCE
+    Timer::Instance().Tick(s);
+    Timer::Instance().ShowElapsedTime("Matrix Linear");
+#endif
+
+    return v;
+}
+
+template <NumericType T>
 inline Matrix<T> Matrix<T>::Transpose() const
 {
     Matrix<T> xt(Ncol(), Nrow(), this->S());
@@ -141,18 +236,6 @@ inline Matrix<T> Matrix<T>::Transpose() const
     CUDA_CHECK_LAST();
     CUDA_CHECK(cudaStreamSynchronize(this->m_stream));
     return xt;
-}
-
-template <NumericType T>
-inline void Matrix<T>::Reshape_(size_t nrow)
-{
-    auto ncol = m_nrow * m_ncol / nrow;
-    if (m_nrow * m_ncol == nrow * ncol) {
-        m_nrow = nrow;
-        m_ncol = ncol;
-    } else {
-        fprintf(stdout, "Imcompatible size, failed to reshape!\n");
-    }
 }
 
 template <NumericType T>
@@ -370,4 +453,16 @@ inline Matrix<T> MatMul(const Matrix<T>& x, const Matrix<T>& y)
     } else {
         return MatMulSmall(x, y);
     }
+}
+
+template <NumericType T>
+inline Vector<T> Inner(const Matrix<T>& x, const Vector<T>& y)
+{
+    return MatMul(x, y.Into(1));
+}
+
+template <NumericType T>
+inline Vector<T> Inner(const Vector<T>& x, const Matrix<T>& y)
+{
+    return MatMul(x.Into(x.Nlen()), y);
 }
