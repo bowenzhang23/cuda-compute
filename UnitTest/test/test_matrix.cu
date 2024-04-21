@@ -151,9 +151,9 @@ TEST(Matrix, Reshape)
     std::vector<int>      x(len);
     std::generate(x.begin(), x.end(), [i = 0]() mutable { return i++; });
     Matrix<int> mx(x.data(), row, col);
-    mx.Reshape_(1);
-    EXPECT_EQ(mx.Nrow(), 1);
+    mx.Reshape_(100);
     EXPECT_EQ(mx.Ncol(), 100);
+    EXPECT_EQ(mx.Nrow(), 1);
     EXPECT_EQ(mx.ToCPU(), x);
 }
 
