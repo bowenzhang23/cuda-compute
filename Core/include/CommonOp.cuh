@@ -1,6 +1,7 @@
 #pragma once
 
 #include "cuda_runtime.h"
+#include <limits>
 
 enum class BinaryOp { EQ, NE, GT, GE, LT, LE, MIN, MAX };
 
@@ -244,9 +245,11 @@ __global__ void max_unroll(ValueIndex<T>* Z, const T* X, unsigned n)
     unsigned tid  = threadIdx.x;
     unsigned i    = blockIdx.x * (block_dim * 2) + threadIdx.x;
     unsigned grid = block_dim * 2 * gridDim.x;
-    if (i >= n) return;
 
     __shared__ ValueIndex<T> Zs[block_dim];
+    Zs[tid].val = std::numeric_limits<T>::lowest();
+    Zs[tid].idx = -1;
+    __syncthreads();
 
     while (i < n) {
         Zs[tid].val = X[i];
@@ -281,9 +284,11 @@ __global__ void min_unroll(ValueIndex<T>* Z, const T* X, unsigned n)
     unsigned tid  = threadIdx.x;
     unsigned i    = blockIdx.x * (block_dim * 2) + threadIdx.x;
     unsigned grid = block_dim * 2 * gridDim.x;
-    if (i >= n) return;
 
     __shared__ ValueIndex<T> Zs[block_dim];
+    Zs[tid].val = std::numeric_limits<T>::max();
+    Zs[tid].idx = -1;
+    __syncthreads();
 
     while (i < n) {
         Zs[tid].val = X[i];
