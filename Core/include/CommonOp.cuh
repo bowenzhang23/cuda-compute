@@ -210,10 +210,10 @@ __global__ void sum_unroll(T* Z, const T* X, unsigned n)
     unsigned tid  = threadIdx.x;
     unsigned i    = blockIdx.x * (block_dim * 2) + threadIdx.x;
     unsigned grid = block_dim * 2 * gridDim.x;
-    if (i >= n) return;
 
     __shared__ T Zs[block_dim];
     Zs[tid] = (T) 0;
+    __syncthreads();
 
     while (i < n) {
         Zs[tid] += X[i];
