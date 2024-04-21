@@ -17,6 +17,8 @@ add_compile_definitions(
   $<$<CONFIG:DEBUG>:DEBUG_CONSTRUCTOR>
   $<$<CONFIG:DEBUG>:DEBUG_PERFORMANCE>)
 
+set(CMAKE_CUDA_FLAGS "--expt-relaxed-constexpr --use_fast_math")
+
 enable_testing()
 
 project(
