@@ -39,6 +39,7 @@ public:
 
 public:
     void      Reshape_(size_t ncol);
+    Matrix    Reshaped(size_t ncol);
     Vector<T> Into() const;
     Vector<T> Row(size_t i) const;
     Vector<T> Col(size_t i) const;
@@ -174,6 +175,14 @@ inline void Matrix<T>::Reshape_(size_t ncol)
 }
 
 template <NumericType T>
+inline Matrix<T> Matrix<T>::Reshaped(size_t ncol)
+{
+    Matrix<T> new_mat(*this);
+    new_mat.Reshape_(ncol);
+    return new_mat;
+}
+
+template <NumericType T>
 inline Vector<T> Matrix<T>::Into() const
 {
     return Vector<T>(*this);
@@ -230,13 +239,9 @@ inline Vector<T> Matrix<T>::Sum(uint8_t axis) const
 {
     std::vector<T> v;
     if (axis == 0) {
-        for (size_t j = 0; j < Ncol(); ++j) {
-            v.push_back(Col(j).Sum());
-        }
+        for (size_t j = 0; j < Ncol(); ++j) { v.push_back(Col(j).Sum()); }
     } else {
-        for (size_t i = 0; i < Nrow(); ++i) {
-            v.push_back(Row(i).Sum());
-        }
+        for (size_t i = 0; i < Nrow(); ++i) { v.push_back(Row(i).Sum()); }
     }
     return Vector<T>(v, v.size(), this->S());
 }
@@ -252,13 +257,9 @@ inline Vector<T> Matrix<T>::Mean(uint8_t axis) const
 {
     std::vector<T> v;
     if (axis == 0) {
-        for (size_t j = 0; j < Ncol(); ++j) {
-            v.push_back(Col(j).Mean());
-        }
+        for (size_t j = 0; j < Ncol(); ++j) { v.push_back(Col(j).Mean()); }
     } else {
-        for (size_t i = 0; i < Nrow(); ++i) {
-            v.push_back(Row(i).Mean());
-        }
+        for (size_t i = 0; i < Nrow(); ++i) { v.push_back(Row(i).Mean()); }
     }
     return Vector<T>(v, v.size(), this->S());
 }
@@ -278,9 +279,7 @@ inline Vector<T> Matrix<T>::Max(uint8_t axis) const
             v.push_back(Col(j).Max().val);
         }
     } else {
-        for (size_t i = 0; i < Nrow(); ++i) {
-            v.push_back(Row(i).Max().val);
-        }
+        for (size_t i = 0; i < Nrow(); ++i) { v.push_back(Row(i).Max().val); }
     }
     return Vector<T>(v, v.size(), this->S());
 }
@@ -300,9 +299,7 @@ inline Vector<T> Matrix<T>::Min(uint8_t axis) const
             v.push_back(Col(j).Min().val);
         }
     } else {
-        for (size_t i = 0; i < Nrow(); ++i) {
-            v.push_back(Row(i).Min().val);
-        }
+        for (size_t i = 0; i < Nrow(); ++i) { v.push_back(Row(i).Min().val); }
     }
     return Vector<T>(v, v.size(), this->S());
 }

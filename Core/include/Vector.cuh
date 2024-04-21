@@ -37,7 +37,7 @@ public:
     using int_type   = Vector<int>;
 
 public:
-    Matrix<T>     Into(size_t ncol) const;
+    Matrix<T> Into(size_t ncol) const;
 
 public:
     T             Sum() const;
@@ -46,6 +46,7 @@ public:
     ValueIndex<T> Min() const;
     Vector<T>     Reversed() const;
     void          Sort_(bool ascending = true);
+    Vector<T>     Sorted(bool ascending = true);
 
 private:
     size_t m_len;
@@ -282,6 +283,14 @@ inline void Vector<T>::Sort_(bool ascending)
 #endif
     CUDA_CHECK_LAST();
     CUDA_CHECK(cudaStreamSynchronize(this->S()));
+}
+
+template <NumericType T>
+inline Vector<T> Vector<T>::Sorted(bool ascending)
+{
+    Vector<T> new_vec(*this);
+    new_vec.Sort_(ascending);
+    return new_vec;
 }
 
 template <NumericType T>

@@ -90,6 +90,7 @@ template <typename Tnb, typename Tcd, typename T>
     cls.def("min", [](const Tcd& a) { return ToPair(a.Min()); });
     cls.def("reversed", &Tcd::Reversed);
     cls.def("sort_", &Tcd::Sort_, "ascending"_a = true);
+    cls.def("sorted", &Tcd::Sorted, "ascending"_a = true);
 
     return cls;
 }
@@ -100,6 +101,7 @@ template <typename Tnb, typename Tcd, typename T>
     cls.def(nb::init<unsigned long, unsigned long>());
     cls.def(nb::init<const std::vector<T>&, unsigned long, unsigned long>());
     cls.def("reshape_", &Tcd::Reshape_, "ncol"_a);
+    cls.def("reshaped", &Tcd::Reshaped, "ncol"_a);
     cls.def("into", &Tcd::Into);
     cls.def("row", &Tcd::Row, "i"_a);
     cls.def("col", &Tcd::Col, "j"_a);

@@ -49,6 +49,12 @@ print(f"{d.sum()=}")
 print(f"{type(d), type(d.into(3))=}")
 print(f"{d.into(3).shape()=}")
 
+e = c2w.Vectori([-5, 7, 9, 3, -2, 0, -1, 10, -12], 9)
+e = e.sorted()
+print(f"{e.cpu()=}")
+e = e.sorted(False)
+print(f"{e.cpu()=}")
+
 a = c2w.Matrixf([1, 2, 3, 4], 2, 2)
 b = c2w.Matrixf([1, 2, 3, 4], 2, 2)
 c = c2w.Matrixf([4, 3, 2, 1], 2, 2)
