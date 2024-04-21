@@ -187,12 +187,12 @@ inline Vector<T> Matrix<T>::Row(size_t i) const
     unsigned nb = DeviceManager::Curr().Prop().multiProcessorCount;
     unsigned nt = 32;
 #ifdef DEBUG_PERFORMANCE
-    Timer::Instance().Tick(s);
+    Timer::Instance().Tick(this->S());
 #endif
     MatrixOp::cp_row<<<nb, nt, 0, this->S()>>>(v.Data(), this->Data(), i,
                                                Ncol());
 #ifdef DEBUG_PERFORMANCE
-    Timer::Instance().Tick(s);
+    Timer::Instance().Tick(this->S());
     Timer::Instance().ShowElapsedTime("Matrix Linear");
 #endif
 
@@ -207,12 +207,12 @@ inline Vector<T> Matrix<T>::Col(size_t j) const
     unsigned nb = DeviceManager::Curr().Prop().multiProcessorCount;
     unsigned nt = 32;
 #ifdef DEBUG_PERFORMANCE
-    Timer::Instance().Tick(s);
+    Timer::Instance().Tick(this->S());
 #endif
     MatrixOp::cp_col<<<nb, nt, 0, this->S()>>>(v.Data(), this->Data(), j,
                                                Nrow(), Ncol());
 #ifdef DEBUG_PERFORMANCE
-    Timer::Instance().Tick(s);
+    Timer::Instance().Tick(this->S());
     Timer::Instance().ShowElapsedTime("Matrix Linear");
 #endif
 
