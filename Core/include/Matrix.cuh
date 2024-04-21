@@ -29,7 +29,7 @@ public:
     }
 
     virtual inline std::vector<size_t> Shape() const override
-    {       
+    {
         return { Nrow(), Ncol() };
     }
 
@@ -44,7 +44,15 @@ public:
     Vector<T> Col(size_t i) const;
 
 public:
-    Matrix Transpose() const;
+    T             Sum() const;
+    Vector<T>     Sum(uint8_t axis) const;
+    T             Mean() const;
+    Vector<T>     Mean(uint8_t axis) const;
+    ValueIndex<T> Max() const;
+    Vector<T>     Max(uint8_t axis) const;
+    ValueIndex<T> Min() const;
+    Vector<T>     Min(uint8_t axis) const;
+    Matrix        Transpose() const;
 
 private:
     size_t m_nrow;
@@ -209,6 +217,94 @@ inline Vector<T> Matrix<T>::Col(size_t j) const
 #endif
 
     return v;
+}
+
+template <NumericType T>
+inline T Matrix<T>::Sum() const
+{
+    return Into().Sum();
+}
+
+template <NumericType T>
+inline Vector<T> Matrix<T>::Sum(uint8_t axis) const
+{
+    std::vector<T> v;
+    if (axis == 0) {
+        for (size_t j = 0; j < Ncol(); ++j) {
+            v.push_back(Col(j).Sum());
+        }
+    } else {
+        for (size_t i = 0; i < Nrow(); ++i) {
+            v.push_back(Row(i).Sum());
+        }
+    }
+    return Vector<T>(v, v.size(), this->S());
+}
+
+template <NumericType T>
+inline T Matrix<T>::Mean() const
+{
+    return Into().Mean();
+}
+
+template <NumericType T>
+inline Vector<T> Matrix<T>::Mean(uint8_t axis) const
+{
+    std::vector<T> v;
+    if (axis == 0) {
+        for (size_t j = 0; j < Ncol(); ++j) {
+            v.push_back(Col(j).Mean());
+        }
+    } else {
+        for (size_t i = 0; i < Nrow(); ++i) {
+            v.push_back(Row(i).Mean());
+        }
+    }
+    return Vector<T>(v, v.size(), this->S());
+}
+
+template <NumericType T>
+inline ValueIndex<T> Matrix<T>::Max() const
+{
+    return Into().Max();
+}
+template <NumericType T>
+inline Vector<T> Matrix<T>::Max(uint8_t axis) const
+{
+    std::vector<T> v;
+    if (axis == 0) {
+        for (size_t j = 0; j < Ncol(); ++j) {
+            // omitting idx
+            v.push_back(Col(j).Max().val);
+        }
+    } else {
+        for (size_t i = 0; i < Nrow(); ++i) {
+            v.push_back(Row(i).Max().val);
+        }
+    }
+    return Vector<T>(v, v.size(), this->S());
+}
+
+template <NumericType T>
+inline ValueIndex<T> Matrix<T>::Min() const
+{
+    return Into().Min();
+}
+template <NumericType T>
+inline Vector<T> Matrix<T>::Min(uint8_t axis) const
+{
+    std::vector<T> v;
+    if (axis == 0) {
+        for (size_t j = 0; j < Ncol(); ++j) {
+            // omitting idx
+            v.push_back(Col(j).Min().val);
+        }
+    } else {
+        for (size_t i = 0; i < Nrow(); ++i) {
+            v.push_back(Row(i).Min().val);
+        }
+    }
+    return Vector<T>(v, v.size(), this->S());
 }
 
 template <NumericType T>

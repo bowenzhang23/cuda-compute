@@ -105,6 +105,14 @@ template <typename Tnb, typename Tcd, typename T>
     cls.def("col", &Tcd::Col, "j"_a);
     cls.def("cpu", &Tcd::ToCPU);
     cls.def("shape", &Tcd::Shape);
+    cls.def("sum", [](const Tcd& a) { return a.Sum(); });
+    cls.def("sum", [](const Tcd& a, uint8_t axis) { return a.Sum(axis); });
+    cls.def("mean", [](const Tcd& a) { return a.Mean(); });
+    cls.def("mean", [](const Tcd& a, uint8_t axis) { return a.Mean(axis); });
+    cls.def("max", [](const Tcd& a) { return ToPair(a.Max()); });
+    cls.def("max", [](const Tcd& a, uint8_t axis) { return a.Max(axis); });
+    cls.def("min", [](const Tcd& a) { return ToPair(a.Min()); });
+    cls.def("min", [](const Tcd& a, uint8_t axis) { return a.Min(axis); });
     cls.def("transpose", &Tcd::Transpose);
 
     return cls;
