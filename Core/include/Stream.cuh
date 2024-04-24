@@ -18,6 +18,7 @@ public:
 
 public:
     static Stream* Create();
+    static Stream* CreateDefault();
     static Stream* CreateNonBlocking();
     static Stream* CreateNonBlocking(int p /* relative priority */);
 

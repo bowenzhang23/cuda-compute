@@ -61,7 +61,7 @@ inline CudaData<T>::CudaData(size_t size, cudaStream_t stream)
     m_hmem = (T*) calloc(1, m_size);
     CUDA_CHECK(cudaMallocAsync((void**) &m_dmem, m_size, m_stream));
     CUDA_CHECK(cudaMemsetAsync((void*) m_dmem, 0, m_size, m_stream));
-    CUDA_CHECK(cudaStreamSynchronize(m_stream));
+    CUDA_CHECK(cudaStreamSynchronize(S()));
 #ifdef DEBUG_PERFORMANCE
     Timer::Instance().Tick(m_stream);
     Timer::Instance().ShowElapsedTime("Construct zeros");
@@ -80,7 +80,7 @@ inline CudaData<T>::CudaData(const T* hmem, size_t size, cudaStream_t stream)
     memcpy(m_hmem, hmem, m_size);
     CUDA_CHECK(cudaMemcpyAsync(m_dmem, m_hmem, m_size, cudaMemcpyHostToDevice,
                                m_stream));
-    CUDA_CHECK(cudaStreamSynchronize(m_stream));
+    CUDA_CHECK(cudaStreamSynchronize(S()));
 #ifdef DEBUG_PERFORMANCE
     Timer::Instance().Tick(m_stream);
     Timer::Instance().ShowElapsedTime("Construct from data");
@@ -104,7 +104,7 @@ inline CudaData<T>::CudaData(const CudaData& other)
     memcpy(m_hmem, other.m_hmem, m_size);
     CUDA_CHECK(cudaMemcpyAsync(m_dmem, other.m_dmem, m_size,
                                cudaMemcpyDeviceToDevice, m_stream));
-    CUDA_CHECK(cudaStreamSynchronize(m_stream));
+    CUDA_CHECK(cudaStreamSynchronize(S()));
 #ifdef DEBUG_PERFORMANCE
     Timer::Instance().Tick(m_stream);
     Timer::Instance().ShowElapsedTime("Copy construct");
@@ -125,7 +125,7 @@ inline CudaData<T>::CudaData(CudaData&& other)
 #endif
     std::swap(m_hmem, other.m_hmem);
     std::swap(m_dmem, other.m_dmem);
-    CUDA_CHECK(cudaStreamSynchronize(m_stream));
+    CUDA_CHECK(cudaStreamSynchronize(S()));
 #ifdef DEBUG_PERFORMANCE
     Timer::Instance().Tick(m_stream);
     Timer::Instance().ShowElapsedTime("Move construct");
@@ -149,7 +149,7 @@ inline CudaData<T>& CudaData<T>::operator=(const CudaData& other)
     memcpy(m_hmem, other.m_hmem, m_size);
     CUDA_CHECK(cudaMemcpyAsync(m_dmem, other.m_dmem, m_size,
                                cudaMemcpyDeviceToDevice, m_stream));
-    CUDA_CHECK(cudaStreamSynchronize(m_stream));
+    CUDA_CHECK(cudaStreamSynchronize(S()));
 #ifdef DEBUG_PERFORMANCE
     Timer::Instance().Tick(m_stream);
     Timer::Instance().ShowElapsedTime("Copy assignment");
@@ -171,7 +171,7 @@ inline CudaData<T>& CudaData<T>::operator=(CudaData&& other)
 #endif
     std::swap(m_hmem, other.m_hmem);
     std::swap(m_dmem, other.m_dmem);
-    CUDA_CHECK(cudaStreamSynchronize(m_stream));
+    CUDA_CHECK(cudaStreamSynchronize(S()));
 #ifdef DEBUG_PERFORMANCE
     Timer::Instance().Tick(m_stream);
     Timer::Instance().ShowElapsedTime("Move assignment");
@@ -184,7 +184,7 @@ inline CudaData<T>::~CudaData()
 {
     free(m_hmem);
     CUDA_CHECK(cudaFreeAsync((void*) m_dmem, m_stream));
-    CUDA_CHECK(cudaStreamSynchronize(m_stream));
+    CUDA_CHECK(cudaStreamSynchronize(S()));
 }
 
 template <NumericType T>
@@ -197,7 +197,7 @@ inline std::vector<T> CudaData<T>::ToCPU() const
     std::vector<T> hmem(count);
     CUDA_CHECK(cudaMemcpyAsync(m_hmem, m_dmem, m_size, cudaMemcpyDeviceToHost,
                                m_stream));
-    CUDA_CHECK(cudaStreamSynchronize(m_stream));
+    CUDA_CHECK(cudaStreamSynchronize(S()));
     memcpy((void*) hmem.data(), m_hmem, m_size);
     return hmem;
 #ifdef DEBUG_PERFORMANCE

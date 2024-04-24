@@ -56,7 +56,7 @@ TEST(Vector, MoveConstruct)
 TEST(Vector, SumAndMean)
 {
     constexpr std::size_t len = 4001;
-    std::vector<int>    x(len);
+    std::vector<int>      x(len);
     std::generate(x.begin(), x.end(), []() { return 42; });
     Vector<int> vx(x, len);
     EXPECT_EQ(vx.Sum(), 4001 * 42);
@@ -66,11 +66,11 @@ TEST(Vector, SumAndMean)
 TEST(Vector, MaxAndMin)
 {
     constexpr std::size_t len = 4001;
-    std::vector<int>    x(len);
+    std::vector<int>      x(len);
     std::generate(x.begin(), x.end(), []() { return 0; });
     x[1001] = 1001;
     x[2002] = -2002;
-    Vector<int> vx(x, len);
+    Vector<int>     vx(x, len);
     ValueIndex<int> max_vi = vx.Max();
     ValueIndex<int> min_vi = vx.Min();
     EXPECT_EQ(max_vi.val, 1001);
@@ -82,7 +82,7 @@ TEST(Vector, MaxAndMin)
 TEST(Vector, Reversed)
 {
     constexpr std::size_t len = 255 + 4096;
-    std::vector<int>    x(len);
+    std::vector<int>      x(len);
     std::generate(x.begin(), x.end(), [i = 0]() mutable { return i++; });
     Vector<int> vx(x, len);
     std::reverse(x.begin(), x.end());
@@ -92,7 +92,7 @@ TEST(Vector, Reversed)
 TEST(Vector, SortPowerOfTwo)
 {
     constexpr std::size_t len = 4096;
-    std::vector<int>    x(len);
+    std::vector<int>      x(len);
     std::generate(x.begin(), x.end(), [i = len]() mutable { return i--; });
     Vector<int> vx(x, len);
     vx.Sort_();
@@ -103,7 +103,7 @@ TEST(Vector, SortPowerOfTwo)
 TEST(Vector, SortAscending)
 {
     constexpr std::size_t len = 255 + 4096;
-    std::vector<int>    x(len);
+    std::vector<int>      x(len);
     std::generate(x.begin(), x.end(), [i = len]() mutable { return i--; });
     Vector<int> vx(x, len);
     vx.Sort_();
@@ -114,7 +114,7 @@ TEST(Vector, SortAscending)
 TEST(Vector, SortDescending)
 {
     constexpr std::size_t len = 255 + 4096;
-    std::vector<int>    x(len);
+    std::vector<int>      x(len);
     std::generate(x.begin(), x.end(), [i = 0]() mutable { return i++; });
     Vector<int> vx(x, len);
     vx.Sort_(false);

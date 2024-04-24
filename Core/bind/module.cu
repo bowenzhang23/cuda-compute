@@ -24,6 +24,7 @@ std::pair<T, int> ToPair(const ValueIndex<T>& vi)
 template <typename Tnb, typename Tcd, typename Tcd_int, typename T>
 [[maybe_unused]] Tnb& add_arithmetic(Tnb& cls)
 {
+    // see `import operator`
     cls.def("__pos__", [](const Tcd& a) { return +a; });
     cls.def("__neg__", [](const Tcd& a) { return -a; });
     cls.def("__pow__", [](const Tcd& a, const T b) {

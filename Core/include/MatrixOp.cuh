@@ -4,10 +4,11 @@
 
 namespace MatrixOp
 {
-template <typename T, unsigned tile_dim = 32, unsigned block_rows = 8>
+template <typename T, unsigned tile_dim = 32, unsigned block_rows = 8,
+          unsigned offset = 2>
 __global__ void transpose(T* XT, const T* X, unsigned n_row, unsigned n_col)
 {
-    __shared__ T tmp[tile_dim][tile_dim + 1];
+    __shared__ T tmp[tile_dim][tile_dim + offset];
 
     auto col = threadIdx.x + blockIdx.x * tile_dim;
     auto row = threadIdx.y + blockIdx.y * tile_dim;
@@ -23,6 +24,20 @@ __global__ void transpose(T* XT, const T* X, unsigned n_row, unsigned n_col)
 
     for (int j = 0; j < tile_dim && row + j < n_col; j += block_rows) {
         XT[(row + j) * n_row + col] = tmp[threadIdx.x][threadIdx.y + j];
+    }
+}
+
+template <typename T>
+[[deprecated("Replaced by transpose using smem.")]] __global__ void
+transpose_diag_coord(T* XT, const T* X, unsigned n_row, unsigned n_col)
+{
+    auto blk_x = (blockIdx.x + blockIdx.y) % gridDim.x;
+    auto blk_y = blockIdx.x;
+    auto row   = blockDim.x * blk_x + threadIdx.x;
+    auto col   = blockDim.y * blk_y + threadIdx.y;
+
+    if (row < n_row && col < n_col) {
+        XT[col * n_row + row] = X[row * n_col + col];
     }
 }
 
@@ -154,15 +169,16 @@ __global__ void gemm_large(T* Z, const T* X, const T* Y, unsigned m, unsigned k,
 template <typename T>
 __global__ void cp_row(T* vec_row, const T* mat, unsigned i, unsigned n_col)
 {
-    auto vj      = threadIdx.x + blockIdx.x * blockDim.x;
+    auto vj     = threadIdx.x + blockIdx.x * blockDim.x;
     auto stride = blockDim.x * gridDim.x;
     for (; vj < n_col; vj += stride) { vec_row[vj] = mat[i * n_col + vj]; }
 }
 
 template <typename T>
-__global__ void cp_col(T* vec_col, const T* mat, unsigned j, unsigned n_row, unsigned n_col)
+__global__ void cp_col(T* vec_col, const T* mat, unsigned j, unsigned n_row,
+                       unsigned n_col)
 {
-    auto vi      = threadIdx.x + blockIdx.x * blockDim.x;
+    auto vi     = threadIdx.x + blockIdx.x * blockDim.x;
     auto stride = blockDim.x * gridDim.x;
     for (; vi < n_row; vi += stride) { vec_col[vi] = mat[vi * n_col + j]; }
 }

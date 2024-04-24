@@ -319,15 +319,15 @@ inline Matrix<T> Matrix<T>::Transpose() const
 #ifdef DEBUG_PERFORMANCE
     Timer::Instance().Tick(this->S());
 #endif
-    MatrixOp::transpose<<<nb, nt, 0, this->S()>>>(xt.Data(), this->Data(),
-                                                  Nrow(), Ncol());
+    MatrixOp::transpose<T, tile_dim, block_rows, 2>
+        <<<nb, nt, 0, this->S()>>>(xt.Data(), this->Data(), Nrow(), Ncol());
 #ifdef DEBUG_PERFORMANCE
     Timer::Instance().Tick(this->S());
     Timer::Instance().ShowElapsedTime("Matrix Transpose");
 #endif
 
     CUDA_CHECK_LAST();
-    CUDA_CHECK(cudaStreamSynchronize(this->m_stream));
+    StreamSync(this->S());
     return xt;
 }
 
@@ -346,8 +346,8 @@ inline Matrix<T> Linear(T a, const Matrix<T>& x, T b, const Matrix<T>& y, T c)
     Matrix<T> z(n_row, n_col, s);
     if (!HasSameShape(x, y)) { return z; }
 
-    unsigned nb = DeviceManager::Curr().Prop().multiProcessorCount * 4;
-    unsigned nt = 256;
+    unsigned nb = DeviceManager::Curr().Prop().multiProcessorCount * MULT;
+    unsigned nt = NT;
 
 #ifdef DEBUG_PERFORMANCE
     Timer::Instance().Tick(s);
@@ -360,7 +360,7 @@ inline Matrix<T> Linear(T a, const Matrix<T>& x, T b, const Matrix<T>& y, T c)
 #endif
 
     CUDA_CHECK_LAST();
-    CUDA_CHECK(cudaStreamSynchronize(s));
+    StreamSync(s);
 
     return z;
 }
@@ -380,8 +380,8 @@ inline Matrix<T> Power(T c, const Matrix<T>& x, T a, const Matrix<T>& y, T b)
     Matrix<T> z(n_row, n_col, s);
     if (!HasSameShape(x, y)) { return z; }
 
-    unsigned nb = DeviceManager::Curr().Prop().multiProcessorCount * 4;
-    unsigned nt = 256;
+    unsigned nb = DeviceManager::Curr().Prop().multiProcessorCount * MULT;
+    unsigned nt = NT;
 
 #ifdef DEBUG_PERFORMANCE
     Timer::Instance().Tick(s);
@@ -394,7 +394,7 @@ inline Matrix<T> Power(T c, const Matrix<T>& x, T a, const Matrix<T>& y, T b)
 #endif
 
     CUDA_CHECK_LAST();
-    CUDA_CHECK(cudaStreamSynchronize(s));
+    StreamSync(s);
 
     return z;
 }
@@ -415,8 +415,8 @@ inline Matrix<T1> Binary(const Matrix<T2>& x, const Matrix<T2>& y,
     Matrix<T1> z(n_row, n_col, s);
     if (!HasSameShape(x, y)) { return z; }
 
-    unsigned nb = DeviceManager::Curr().Prop().multiProcessorCount * 4;
-    unsigned nt = 256;
+    unsigned nb = DeviceManager::Curr().Prop().multiProcessorCount * MULT;
+    unsigned nt = NT;
 
 #ifdef DEBUG_PERFORMANCE
     Timer::Instance().Tick(s);
@@ -429,7 +429,7 @@ inline Matrix<T1> Binary(const Matrix<T2>& x, const Matrix<T2>& y,
 #endif
 
     CUDA_CHECK_LAST();
-    CUDA_CHECK(cudaStreamSynchronize(s));
+    StreamSync(s);
 
     return z;
 }
@@ -440,8 +440,8 @@ inline Matrix<T1> Binary(const Matrix<T2>& x, T2 y, BinaryFunc func)
     cudaStream_t s = x.S();
     Matrix<T1>   z(x.Nrow(), x.Ncol(), s);
 
-    unsigned nb = DeviceManager::Curr().Prop().multiProcessorCount * 4;
-    unsigned nt = 256;
+    unsigned nb = DeviceManager::Curr().Prop().multiProcessorCount * MULT;
+    unsigned nt = NT;
 
 #ifdef DEBUG_PERFORMANCE
     Timer::Instance().Tick(s);
@@ -454,7 +454,7 @@ inline Matrix<T1> Binary(const Matrix<T2>& x, T2 y, BinaryFunc func)
 #endif
 
     CUDA_CHECK_LAST();
-    CUDA_CHECK(cudaStreamSynchronize(s));
+    StreamSync(s);
 
     return z;
 }
@@ -491,7 +491,7 @@ inline Matrix<T> MatMulSmall(const Matrix<T>& x, const Matrix<T>& y)
 #endif
 
     CUDA_CHECK_LAST();
-    CUDA_CHECK(cudaStreamSynchronize(s));
+    StreamSync(s);
     return z;
 }
 
@@ -531,7 +531,7 @@ inline Matrix<T> MatMulLarge(const Matrix<T>& x, const Matrix<T>& y)
 #endif
 
     CUDA_CHECK_LAST();
-    CUDA_CHECK(cudaStreamSynchronize(s));
+    StreamSync(s);
     return z;
 }
 

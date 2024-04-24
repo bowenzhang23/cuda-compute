@@ -30,6 +30,8 @@ void Stream::Sync() { CUDA_CHECK(cudaStreamSynchronize(m_stream)); }
 
 Stream* Stream::Create() { return new Stream(); }
 
+Stream* Stream::CreateDefault() { return new Stream(cudaStreamDefault); }
+
 Stream* Stream::CreateNonBlocking()
 {
     return new Stream(cudaStreamNonBlocking);

@@ -144,7 +144,7 @@ inline Matrix<T> Vector<T>::Into(size_t ncol) const
 template <NumericType T>
 inline T Vector<T>::Sum() const
 {
-    constexpr unsigned nt = 256;
+    constexpr unsigned nt = NT;
     unsigned           nb = (Nlen() + 2 * nt - 1) / (2 * nt);
     Vector<T>          z(nb, this->S());
 
@@ -159,7 +159,7 @@ inline T Vector<T>::Sum() const
 #endif
     auto sum_blocks = z.ToCPU();
     CUDA_CHECK_LAST();
-    CUDA_CHECK(cudaStreamSynchronize(this->S()));
+    StreamSync(this->S());
 
     return std::accumulate(sum_blocks.begin(), sum_blocks.end(), (T) 0);
 }
@@ -173,7 +173,7 @@ inline T Vector<T>::Mean() const
 template <NumericType T>
 inline ValueIndex<T> Vector<T>::Max() const
 {
-    constexpr unsigned    nt = 256;
+    constexpr unsigned    nt = NT;
     unsigned              nb = (Nlen() + 2 * nt - 1) / (2 * nt);
     Vector<ValueIndex<T>> z(nb, this->S());
 
@@ -188,7 +188,7 @@ inline ValueIndex<T> Vector<T>::Max() const
 #endif
     auto max_blocks = z.ToCPU();
     CUDA_CHECK_LAST();
-    CUDA_CHECK(cudaStreamSynchronize(this->S()));
+    StreamSync(this->S());
 
     auto max_iter = std::max_element(
         max_blocks.begin(), max_blocks.end(),
@@ -199,7 +199,7 @@ inline ValueIndex<T> Vector<T>::Max() const
 template <NumericType T>
 inline ValueIndex<T> Vector<T>::Min() const
 {
-    constexpr unsigned    nt = 256;
+    constexpr unsigned    nt = NT;
     unsigned              nb = (Nlen() + 2 * nt - 1) / (2 * nt);
     Vector<ValueIndex<T>> z(nb, this->S());
 
@@ -214,7 +214,7 @@ inline ValueIndex<T> Vector<T>::Min() const
 #endif
     auto min_blocks = z.ToCPU();
     CUDA_CHECK_LAST();
-    CUDA_CHECK(cudaStreamSynchronize(this->S()));
+    StreamSync(this->S());
 
     auto min_iter = std::min_element(
         min_blocks.begin(), min_blocks.end(),
@@ -225,7 +225,7 @@ inline ValueIndex<T> Vector<T>::Min() const
 template <NumericType T>
 inline Vector<T> Vector<T>::Reversed() const
 {
-    constexpr unsigned nt       = 128;
+    constexpr unsigned nt       = NT;
     constexpr unsigned tile_dim = 512;
     unsigned           nb       = (Nlen() + tile_dim - 1) / tile_dim;
     Vector<T>          z(Nlen(), this->S());
@@ -240,7 +240,7 @@ inline Vector<T> Vector<T>::Reversed() const
     Timer::Instance().ShowElapsedTime("Vector Reversed");
 #endif
     CUDA_CHECK_LAST();
-    CUDA_CHECK(cudaStreamSynchronize(this->S()));
+    StreamSync(this->S());
 
     return z;
 }
@@ -251,7 +251,7 @@ inline void Vector<T>::Sort_(bool ascending)
     T    padding_value { 0 };
     auto n_next_po2 = VectorOp::next_po2(Nlen());
 
-    constexpr unsigned nt = 128;
+    constexpr unsigned nt = NT;
     unsigned           nb = (n_next_po2 + nt - 1) / nt;
 
 #ifdef DEBUG_PERFORMANCE
@@ -282,7 +282,7 @@ inline void Vector<T>::Sort_(bool ascending)
     Timer::Instance().ShowElapsedTime("Vector Sort");
 #endif
     CUDA_CHECK_LAST();
-    CUDA_CHECK(cudaStreamSynchronize(this->S()));
+    StreamSync(this->S());
 }
 
 template <NumericType T>
@@ -306,8 +306,8 @@ inline Vector<T> Linear(T a, const Vector<T>& x, T b, const Vector<T>& y, T c)
     Vector<T> z(len, s);
     if (!HasSameShape(x, y)) { return z; }
 
-    unsigned nb = DeviceManager::Curr().Prop().multiProcessorCount * 4;
-    unsigned nt = 256;
+    unsigned nb = DeviceManager::Curr().Prop().multiProcessorCount * MULT;
+    unsigned nt = NT;
 
 #ifdef DEBUG_PERFORMANCE
     Timer::Instance().Tick(s);
@@ -320,7 +320,7 @@ inline Vector<T> Linear(T a, const Vector<T>& x, T b, const Vector<T>& y, T c)
 #endif
 
     CUDA_CHECK_LAST();
-    CUDA_CHECK(cudaStreamSynchronize(s));
+    StreamSync(s);
 
     return z;
 }
@@ -338,8 +338,8 @@ inline Vector<T> Power(T c, const Vector<T>& x, T a, const Vector<T>& y, T b)
     Vector<T> z(len, s);
     if (!HasSameShape(x, y)) { return z; }
 
-    unsigned nb = DeviceManager::Curr().Prop().multiProcessorCount * 4;
-    unsigned nt = 256;
+    unsigned nb = DeviceManager::Curr().Prop().multiProcessorCount * MULT;
+    unsigned nt = NT;
 
 #ifdef DEBUG_PERFORMANCE
     Timer::Instance().Tick(s);
@@ -352,7 +352,7 @@ inline Vector<T> Power(T c, const Vector<T>& x, T a, const Vector<T>& y, T b)
 #endif
 
     CUDA_CHECK_LAST();
-    CUDA_CHECK(cudaStreamSynchronize(s));
+    StreamSync(s);
 
     return z;
 }
@@ -370,8 +370,8 @@ inline Vector<T1> Binary(const Vector<T2>& x, const Vector<T2>& y, BinaryOp op)
     Vector<T1> z(len, s);
     if (!HasSameShape(x, y)) { return z; }
 
-    unsigned nb = DeviceManager::Curr().Prop().multiProcessorCount * 4;
-    unsigned nt = 256;
+    unsigned nb = DeviceManager::Curr().Prop().multiProcessorCount * MULT;
+    unsigned nt = NT;
 
 #ifdef DEBUG_PERFORMANCE
     Timer::Instance().Tick(s);
@@ -384,7 +384,7 @@ inline Vector<T1> Binary(const Vector<T2>& x, const Vector<T2>& y, BinaryOp op)
 #endif
 
     CUDA_CHECK_LAST();
-    CUDA_CHECK(cudaStreamSynchronize(s));
+    StreamSync(s);
 
     return z;
 }
@@ -395,8 +395,8 @@ inline Vector<T1> Binary(const Vector<T2>& x, T2 y, BinaryOp op)
     cudaStream_t s = x.S();
     Vector<T1>   z(x.Nlen(), s);
 
-    unsigned nb = DeviceManager::Curr().Prop().multiProcessorCount * 4;
-    unsigned nt = 256;
+    unsigned nb = DeviceManager::Curr().Prop().multiProcessorCount * MULT;
+    unsigned nt = NT;
 
 #ifdef DEBUG_PERFORMANCE
     Timer::Instance().Tick(s);
@@ -409,7 +409,7 @@ inline Vector<T1> Binary(const Vector<T2>& x, T2 y, BinaryOp op)
 #endif
 
     CUDA_CHECK_LAST();
-    CUDA_CHECK(cudaStreamSynchronize(s));
+    StreamSync(s);
 
     return z;
 }
@@ -427,7 +427,7 @@ inline T Inner(const Vector<T>& x, const Vector<T>& y)
 
     if (!HasSameShape(x, y)) { return 0; }
 
-    constexpr unsigned nt = 256;
+    constexpr unsigned nt = NT;
     unsigned           nb = (len + 2 * nt - 1) / (2 * nt);
     Vector<T>          z(nb, s);
 
@@ -442,7 +442,7 @@ inline T Inner(const Vector<T>& x, const Vector<T>& y)
 #endif
     auto inner_blocks = z.ToCPU();
     CUDA_CHECK_LAST();
-    CUDA_CHECK(cudaStreamSynchronize(s));
+    StreamSync(s);
 
     return std::accumulate(inner_blocks.begin(), inner_blocks.end(), (T) 0);
 }

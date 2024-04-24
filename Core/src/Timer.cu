@@ -18,8 +18,7 @@ void Timer::Tick(const cudaStream_t stream)
     }
 }
 
-Timer::Timer()
-    : m_isRecording(false), m_elapsedTime(0.f), m_begin(), m_end()
+Timer::Timer() : m_isRecording(false), m_elapsedTime(0.f), m_begin(), m_end()
 {
     CUDA_CHECK(cudaEventCreate(&m_begin));
     CUDA_CHECK(cudaEventCreate(&m_end));

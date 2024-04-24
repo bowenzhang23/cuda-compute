@@ -64,7 +64,8 @@ TEST(Vector, Binary)
     constexpr std::size_t len = row * col;
     std::vector<int>      x(len);
     std::vector<int>      y(len);
-    std::generate(x.begin(), x.end(), [i = 0]() mutable { return 1 - (i++) % 2; });
+    std::generate(x.begin(), x.end(),
+                  [i = 0]() mutable { return 1 - (i++) % 2; });
     std::generate(y.begin(), y.end(), [i = 0]() mutable { return (i++) % 2; });
     Matrix<int> mx(x.data(), row, col);
     Matrix<int> my(y.data(), row, col);

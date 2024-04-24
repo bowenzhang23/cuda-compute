@@ -1,7 +1,12 @@
 #pragma once
 
+#include "Error.cuh"
 #include "cuda_runtime.h"
+#include "cuda_runtime_api.h"
 #include <limits>
+
+static constexpr unsigned MULT = 16;
+static constexpr unsigned NT   = 128;
 
 enum class BinaryOp { EQ, NE, GT, GE, LT, LE, MIN, MAX };
 
@@ -10,6 +15,48 @@ struct ValueIndex {
     T   val;
     int idx;
 } __attribute__((aligned(2 * std::max(sizeof(T), 4lu))));
+
+using four_t  = std::integral_constant<size_t, 4>;
+using eight_t = std::integral_constant<size_t, 8>;
+
+template <typename T>
+concept is_float_v = std::is_floating_point_v<T> && sizeof(T) == four_t();
+
+template <typename T>
+concept is_double_v = std::is_floating_point_v<T> && sizeof(T) == eight_t();
+
+template <typename T>
+concept is_int_v = std::is_integral_v<T> && sizeof(T) == four_t();
+
+template <typename T>
+concept is_long_v = std::is_integral_v<T> && sizeof(T) == eight_t();
+
+void SetCacheConfig(cudaFuncCache config)
+{
+    CUDA_CHECK(cudaDeviceSetCacheConfig(config));
+}
+
+void SetCacheConfig(void* func, cudaFuncCache config)
+{
+    CUDA_CHECK(cudaFuncSetCacheConfig(func, config));
+}
+
+void SetSharedMemConfig(cudaSharedMemConfig config)
+{
+    CUDA_CHECK(cudaDeviceSetSharedMemConfig(config));
+}
+
+void SetSharedMemConfig(void* func, cudaSharedMemConfig config)
+{
+    CUDA_CHECK(cudaFuncSetSharedMemConfig(func, config));
+}
+
+void StreamSync(cudaStream_t stream)
+{
+    CUDA_CHECK(cudaStreamSynchronize(stream));
+}
+
+cudaError_t StreamQuery(cudaStream_t stream) { return cudaStreamQuery(stream); }
 
 namespace CommonOp
 {
@@ -185,7 +232,13 @@ __global__ void cxamyb(T* Z, const T c, const T* X, const T a, const T* Y,
 {
     auto i      = threadIdx.x + blockIdx.x * blockDim.x;
     auto stride = blockDim.x * gridDim.x;
-    for (; i < n; i += stride) { Z[i] = c * pow(X[i], a) * pow(Y[i], b); }
+    for (; i < n; i += stride) {
+        if constexpr (is_float_v<T>) {
+            Z[i] = c * __powf(X[i], a) * __powf(Y[i], b);
+        } else {
+            Z[i] = c * pow(X[i], a) * pow(Y[i], b);
+        }
+    }
 }
 
 template <typename T1, typename T2>

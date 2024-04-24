@@ -20,7 +20,10 @@ std::string Device::ToString() const
     ss << "SM Count: " << Prop().multiProcessorCount << '\n';
     ss << "Max Threads per Thread Block: " << Prop().maxThreadsPerBlock << '\n';
     ss << "Max Threads per SM: " << Prop().maxThreadsPerMultiProcessor << '\n';
+    ss << "Max Warps per SM: " << (Prop().maxThreadsPerMultiProcessor >> 5)
+       << '\n';
     ss << "Max Threads Blocks per SM: " << Prop().multiProcessorCount << '\n';
+    ss << "Max Registers per SM: " << Prop().regsPerMultiprocessor << '\n';
     ss << "StreamPriority: from " << StreamPriorityLeast() << " to "
        << StreamPriorityGreatest() << '\n';
     ss << "ComputeCapability: " << Prop().major << '.' << Prop().minor << '\n';
