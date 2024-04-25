@@ -5,10 +5,10 @@
 namespace MatrixOp
 {
 template <typename T, unsigned tile_dim = 32, unsigned block_rows = 8,
-          unsigned offset = 2>
+          unsigned padding = 1>
 __global__ void transpose(T* XT, const T* X, unsigned n_row, unsigned n_col)
 {
-    __shared__ T tmp[tile_dim][tile_dim + offset];
+    __shared__ T tmp[tile_dim][tile_dim + padding];
 
     auto col = threadIdx.x + blockIdx.x * tile_dim;
     auto row = threadIdx.y + blockIdx.y * tile_dim;
@@ -89,7 +89,8 @@ __global__ void gemm_small(T* Z, const T* X, const T* Y, unsigned m, unsigned k,
 }
 
 template <typename T, unsigned tile_m = 64, unsigned tile_k = 8,
-          unsigned tile_n = 64, unsigned block_m = 8, unsigned block_n = 8>
+          unsigned tile_n = 64, unsigned block_m = 8, unsigned block_n = 8,
+          unsigned padding = 4>
 __global__ void gemm_large(T* Z, const T* X, const T* Y, unsigned m, unsigned k,
                            unsigned n)
 {
@@ -101,8 +102,8 @@ __global__ void gemm_large(T* Z, const T* X, const T* Y, unsigned m, unsigned k,
     auto tile_row = blockIdx.y;
     auto tile_col = blockIdx.x;
 
-    __shared__ T Xs[tile_k][tile_m];
-    __shared__ T Ys[tile_k][tile_n];
+    __shared__ T Xs[tile_k][tile_m + padding];
+    __shared__ T Ys[tile_k][tile_n + padding];
 
     // w.r.t thread dimension of one tile
     int thread_row = threadIdx.x / (tile_n / block_n);

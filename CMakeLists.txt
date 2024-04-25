@@ -16,8 +16,13 @@ add_compile_options(
 add_compile_definitions($<$<CONFIG:DEBUG>:DEBUG_CONSTRUCTOR>
                         $<$<CONFIG:DEBUG>:DEBUG_PERFORMANCE>)
 
-set(CMAKE_CUDA_FLAGS
-    "-arch=sm_86 --expt-relaxed-constexpr --use_fast_math -fmad=true")
+if(CMAKE_BUILD_TYPE STREQUAL "DEBUG")
+  set(CMAKE_CUDA_FLAGS "-arch=sm_86 -G -g -Xptxas -v -fmad=true --expt-relaxed-constexpr")
+else()
+  set(CMAKE_CUDA_FLAGS "-arch=sm_86 -O3 --expt-relaxed-constexpr")
+endif()
+
+message(STATUS "nvcc options = ${CMAKE_CUDA_FLAGS}")
 
 enable_testing()
 

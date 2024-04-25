@@ -311,6 +311,7 @@ inline Matrix<T> Matrix<T>::Transpose() const
 
     constexpr unsigned tile_dim   = 32;
     constexpr unsigned block_rows = 8;
+    constexpr unsigned padding    = 1;
 
     dim3 nb = { ((unsigned) Nrow() + tile_dim - 1) / tile_dim,
                 ((unsigned) Ncol() + tile_dim - 1) / tile_dim };
@@ -319,7 +320,7 @@ inline Matrix<T> Matrix<T>::Transpose() const
 #ifdef DEBUG_PERFORMANCE
     Timer::Instance().Tick(this->S());
 #endif
-    MatrixOp::transpose<T, tile_dim, block_rows, 2>
+    MatrixOp::transpose<T, tile_dim, block_rows, padding>
         <<<nb, nt, 0, this->S()>>>(xt.Data(), this->Data(), Nrow(), Ncol());
 #ifdef DEBUG_PERFORMANCE
     Timer::Instance().Tick(this->S());
@@ -516,6 +517,7 @@ inline Matrix<T> MatMulLarge(const Matrix<T>& x, const Matrix<T>& y)
     constexpr unsigned tile_n  = 64;
     constexpr unsigned block_m = 8;
     constexpr unsigned block_n = 8;
+    constexpr unsigned padding = 4;
 
     dim3 nb = { (n + tile_n - 1) / tile_n, (m + tile_m - 1) / tile_m };
     dim3 nt = { tile_m * tile_n / block_m / block_n };
@@ -523,7 +525,7 @@ inline Matrix<T> MatMulLarge(const Matrix<T>& x, const Matrix<T>& y)
 #ifdef DEBUG_PERFORMANCE
     Timer::Instance().Tick(s);
 #endif
-    MatrixOp::gemm_large<T, tile_m, tile_k, tile_n, block_m, block_n>
+    MatrixOp::gemm_large<T, tile_m, tile_k, tile_n, block_m, block_n, padding>
         <<<nb, nt, 0, s>>>(z.Data(), x.Data(), y.Data(), m, k, n);
 #ifdef DEBUG_PERFORMANCE
     Timer::Instance().Tick(s);

@@ -60,6 +60,13 @@ cudaError_t StreamQuery(cudaStream_t stream) { return cudaStreamQuery(stream); }
 
 namespace CommonOp
 {
+
+template <typename T>
+__forceinline__ __device__ T atomicMax(T* address, T val);
+
+template <typename T>
+__forceinline__ __device__ T atomicMin(T* address, T val);
+
 template <typename T>
 __forceinline__ __device__ int eq(const T& lhs, const T& rhs)
 {
