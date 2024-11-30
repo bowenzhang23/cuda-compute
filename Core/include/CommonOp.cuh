@@ -43,12 +43,21 @@ void SetCacheConfig(void* func, cudaFuncCache config)
 
 void SetSharedMemConfig(cudaSharedMemConfig config)
 {
+#if (CUDART_VERSION > 12030)
+    (void)config;
+#else
     CUDA_CHECK(cudaDeviceSetSharedMemConfig(config));
+#endif
 }
 
 void SetSharedMemConfig(void* func, cudaSharedMemConfig config)
 {
+#if (CUDART_VERSION > 12030)
+    (void)func;
+    (void)config;
+#else
     CUDA_CHECK(cudaFuncSetSharedMemConfig(func, config));
+#endif
 }
 
 void StreamSync(cudaStream_t stream)
